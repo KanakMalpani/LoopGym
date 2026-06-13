@@ -22,11 +22,26 @@
 
 ## Quick start
 
+**From GitHub (recommended for v0.1):**
+
+```bash
+pip install git+https://github.com/KanakMalpani/LoopGym.git
+python -c "import loopgym as lg; print(lg.make('loopbench/code-repair-v1'))"
+```
+
+**Local development:**
+
 ```bash
 git clone https://github.com/KanakMalpani/LoopGym.git
 cd LoopGym
 pip install -e ".[dev]"
 python examples/quickstart.py
+```
+
+**PyPI** (after first release — see [PUBLISHING.md](PUBLISHING.md)):
+
+```bash
+pip install loopgym
 ```
 
 ```python

@@ -5,6 +5,13 @@ description = "OpenAI Gym equivalent for loops — create, run, benchmark, compa
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
+authors = [{ name = "Kanak Malpani" }]
+keywords = ["loop-engineering", "loopgym", "agents", "reinforcement-learning"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+]
 dependencies = [
     "PyYAML>=6.0",
 ]
