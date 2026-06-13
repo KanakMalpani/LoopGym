@@ -5,13 +5,10 @@ on:
     types: [published]
   workflow_dispatch:
 
-permissions:
-  id-token: write
-
 jobs:
   publish:
     runs-on: ubuntu-latest
-    environment: pypi
+    if: ${{ secrets.PYPI_API_TOKEN != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -30,3 +27,13 @@ jobs:
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
           skip-existing: true
+
+  publish-skipped:
+    runs-on: ubuntu-latest
+    if: ${{ secrets.PYPI_API_TOKEN == '' }}
+    steps:
+      - name: Missing PYPI_API_TOKEN
+        run: |
+          echo "::warning::Add PYPI_API_TOKEN to repository secrets, then re-run this workflow or create a new release."
+          echo "See PUBLISHING.md in this repository."
+          exit 1
