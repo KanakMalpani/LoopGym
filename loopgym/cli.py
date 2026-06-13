@@ -1,0 +1,47 @@
+"""LoopGym CLI."""
+
+from __future__ import annotations
+
+import argparse
+import json
+
+import loopgym as lg
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="LoopGym — run loop environments")
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    list_cmd = sub.add_parser("list", help="List registered environments")
+    list_cmd.set_defaults(func=_cmd_list)
+
+    run_cmd = sub.add_parser("run", help="Run an environment episode")
+    run_cmd.add_argument("env_id", help="Environment ID")
+    run_cmd.add_argument("--task-id", default="default")
+    run_cmd.add_argument("--seed", type=int, default=0)
+    run_cmd.add_argument("--spec-path", default=None)
+    run_cmd.set_defaults(func=_cmd_run)
+
+    args = parser.parse_args()
+    args.func(args)
+
+
+def _cmd_list(_args: argparse.Namespace) -> None:
+    for env_id in lg.list_envs():
+        print(env_id)
+
+
+def _cmd_run(args: argparse.Namespace) -> None:
+    env = lg.make(args.env_id, spec_path=args.spec_path, seed=args.seed)
+    if hasattr(env, "run_episode"):
+        result = env.run_episode(task_id=args.task_id, seed=args.seed)
+        print(json.dumps(result, indent=2))
+    else:
+        obs = env.reset(task_id=args.task_id, seed=args.seed)
+        while not env.done:
+            obs, reward, done, info = env.step()
+            print(f"step reward={reward:.3f} quality={obs.quality_score:.3f} done={done}")
+
+
+if __name__ == "__main__":
+    main()

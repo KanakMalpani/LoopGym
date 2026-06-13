@@ -1,0 +1,138 @@
+loop_name: multi-agent-debate-loop
+version: 1.0.0
+
+objective: >
+  Given inputs.proposal, produce a consensus recommendation with score >= 0.88
+  across reviewer agents, zero safety violations, terminating within cost_limits.
+
+inputs:
+  schema:
+    proposal:
+      type: string
+      description: "Proposal or code change to review"
+      required: true
+      max_length: 4000
+    risk_tier:
+      type: enum
+      description: "Review strictness level"
+      values: [low, medium, high]
+      default: medium
+  examples:
+    - proposal: "Add refresh token rotation with 15-minute access token TTL"
+      risk_tier: high
+
+memory:
+  type: session
+  backend: redis
+  retention:
+    unit: iteration
+    value: 10
+
+workers:
+  - id: advocate
+    role: "Argue in favor of the proposal with supporting evidence"
+    model:
+      provider: anthropic
+      name: claude-sonnet-4-20250514
+      temperature: 0.3
+    inputs:
+      - from: inputs.proposal
+    outputs:
+      name: AdvocateCase
+      format: text
+    timeout_seconds: 90
+    cost_budget_usd: 0.20
+
+  - id: critic
+    role: "Identify risks, gaps, and counterarguments to the proposal"
+    model:
+      provider: anthropic
+      name: claude-sonnet-4-20250514
+      temperature: 0.2
+    depends_on: [advocate]
+    inputs:
+      - from: inputs.proposal
+    outputs:
+      name: Critique
+      format: text
+    timeout_seconds: 90
+    cost_budget_usd: 0.20
+
+  - id: judge
+    role: "Merge advocate and critic positions into a consensus recommendation"
+    model:
+      provider: openai
+      name: gpt-4.1-mini
+      temperature: 0.1
+    depends_on: [advocate, critic]
+    inputs:
+      - from: inputs.proposal
+    outputs:
+      name: Consensus
+      format: markdown
+    timeout_seconds: 60
+    cost_budget_usd: 0.15
+
+evaluators:
+  - id: consensus_rubric
+    type: llm_rubric
+    runs_after: [judge]
+    rubric:
+      dimensions:
+        - name: balance
+          weight: 0.4
+          scale: [0, 1]
+          criteria: "Fairly weighs advocate and critic positions"
+        - name: actionability
+          weight: 0.6
+          scale: [0, 1]
+          criteria: "Recommendation is clear and implementable"
+      pass_threshold: 0.88
+    model:
+      provider: openai
+      name: gpt-4.1-mini
+      temperature: 0
+
+feedback_channels:
+  - id: consensus_to_judge
+    source: evaluators.consensus_rubric
+    destination: workers.judge
+    format: structured
+    fields: [failure_codes, dimension_scores, remediation_hints]
+
+optimization_strategy:
+  type: prompt_refinement
+  max_steps: 5
+  config:
+    refinement_target: workers.judge
+
+termination_conditions:
+  success:
+    - metric: consensus_score
+      operator: gte
+      value: 0.88
+  failure:
+    - type: max_iterations
+      value: 5
+      action: halt
+
+metrics:
+  - name: consensus_score
+    primary: true
+    definition: "Weighted consensus rubric score"
+    source: evaluators.consensus_rubric
+    unit: ratio
+    target: 0.88
+  - name: cost_usd
+    definition: "Total API spend"
+    source: telemetry.cost
+    unit: usd
+    target: 0.60
+
+safety_constraints: []
+
+cost_limits:
+  per_iteration_usd: 0.20
+  cumulative_usd: 0.60
+  on_exceed:
+    action: halt

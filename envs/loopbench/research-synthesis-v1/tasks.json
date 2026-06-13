@@ -1,0 +1,29 @@
+{
+  "task_family": "LB-RS-1",
+  "tasks": [
+    {
+      "id": "rs-001",
+      "difficulty": "standard",
+      "input": {
+        "query": "What are commercialization timelines for solid-state batteries?",
+        "depth": "standard"
+      }
+    },
+    {
+      "id": "rs-002",
+      "difficulty": "deep",
+      "input": {
+        "query": "Compare RAG vs fine-tuning for enterprise QA systems",
+        "depth": "deep"
+      }
+    },
+    {
+      "id": "rs-003",
+      "difficulty": "quick",
+      "input": {
+        "query": "Summarize EU AI Act compliance requirements for SaaS vendors",
+        "depth": "quick"
+      }
+    }
+  ]
+}

@@ -1,0 +1,133 @@
+loop_name: research-synthesis-loop
+version: 1.0.0
+
+objective: >
+  Produce a research brief answering inputs.query with at least three sources,
+  weighted rubric score >= 0.85, valid citations, terminating within cost_limits.
+
+inputs:
+  schema:
+    query:
+      type: string
+      description: "Research question to investigate"
+      required: true
+      max_length: 2000
+    depth:
+      type: enum
+      description: "Research thoroughness level"
+      values: [quick, standard, deep]
+      default: standard
+  examples:
+    - query: "What are commercialization timelines for solid-state batteries?"
+      depth: standard
+
+memory:
+  type: session
+  backend: composite
+  retention:
+    unit: iteration
+    value: 10
+
+workers:
+  - id: researcher
+    role: "Discover primary sources and extract verifiable claims"
+    model:
+      provider: openai
+      name: gpt-4.1-mini
+      temperature: 0.3
+    inputs:
+      - from: inputs.query
+      - from: inputs.depth
+    outputs:
+      name: ResearchNotes
+      format: json
+    timeout_seconds: 180
+    cost_budget_usd: 0.50
+
+  - id: writer
+    role: "Synthesize research notes into a structured brief with citations"
+    model:
+      provider: openai
+      name: gpt-4.1-mini
+      temperature: 0.2
+    depends_on: [researcher]
+    inputs:
+      - from: inputs.query
+    outputs:
+      name: Brief
+      format: markdown
+    timeout_seconds: 120
+    cost_budget_usd: 0.30
+
+evaluators:
+  - id: citation_check
+    type: deterministic
+    runs_after: [writer]
+    implementation: evaluators.citation_count_min
+  - id: quality_rubric
+    type: llm_rubric
+    runs_after: [writer]
+    rubric:
+      dimensions:
+        - name: coverage
+          weight: 0.5
+          scale: [0, 1]
+          criteria: "Brief addresses all aspects of the query"
+        - name: evidence
+          weight: 0.5
+          scale: [0, 1]
+          criteria: "Claims supported by cited sources"
+      pass_threshold: 0.85
+    model:
+      provider: openai
+      name: gpt-4.1-mini
+      temperature: 0
+
+feedback_channels:
+  - id: rubric_to_writer
+    source: evaluators.quality_rubric
+    destination: workers.writer
+    format: structured
+    fields: [failure_codes, dimension_scores, remediation_hints]
+
+optimization_strategy:
+  type: prompt_refinement
+  max_steps: 5
+  config:
+    refinement_target: workers.writer
+
+termination_conditions:
+  success:
+    - metric: primary_quality
+      operator: gte
+      value: 0.85
+  failure:
+    - type: max_iterations
+      value: 5
+      action: halt
+
+metrics:
+  - name: primary_quality
+    primary: true
+    definition: "Weighted rubric score"
+    source: evaluators.quality_rubric
+    unit: ratio
+    target: 0.85
+  - name: citation_validity
+    definition: "Citation count meets minimum"
+    source: evaluators.citation_check
+    unit: ratio
+    target: 1.0
+  - name: cost_usd
+    definition: "Total API spend"
+    source: telemetry.cost
+    unit: usd
+    target: 0.75
+
+safety_constraints: []
+
+cost_limits:
+  per_iteration_usd: 0.25
+  cumulative_usd: 0.75
+  on_exceed:
+    action: halt

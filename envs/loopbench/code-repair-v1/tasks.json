@@ -1,0 +1,29 @@
+{
+  "task_family": "LB-CR-1",
+  "tasks": [
+    {
+      "id": "cr-001",
+      "difficulty": "easy",
+      "input": {
+        "bug_description": "parse_int returns None instead of raising ValueError on invalid input",
+        "repo_snapshot": "fixtures/calc-v1"
+      }
+    },
+    {
+      "id": "cr-002",
+      "difficulty": "medium",
+      "input": {
+        "bug_description": "Binary search returns wrong index when target is first element",
+        "repo_snapshot": "fixtures/search-v1"
+      }
+    },
+    {
+      "id": "cr-003",
+      "difficulty": "hard",
+      "input": {
+        "bug_description": "Race condition in async cache invalidation causes stale reads",
+        "repo_snapshot": "fixtures/cache-v2"
+      }
+    }
+  ]
+}

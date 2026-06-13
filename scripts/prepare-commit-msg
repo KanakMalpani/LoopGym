@@ -1,0 +1,7 @@
+#!/bin/sh
+# Strip Cursor agent co-author trailers from commit messages.
+MSG_FILE="$1"
+if [ -f "$MSG_FILE" ]; then
+  grep -v 'cursoragent@cursor.com' "$MSG_FILE" > "$MSG_FILE.tmp" && mv "$MSG_FILE.tmp" "$MSG_FILE"
+fi
+exit 0

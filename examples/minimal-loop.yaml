@@ -1,0 +1,156 @@
+loop_name: echo-loop
+version: 1.0.0
+
+objective: >
+  Transform inputs.message into a concise summary of at most 100 words,
+  achieving quality score >= 0.80, with zero safety violations,
+  terminating within cost_limits.
+
+inputs:
+  schema:
+    message:
+      type: string
+      description: "Text to summarize"
+      required: true
+      max_length: 5000
+  examples:
+    - message: "Loop Engineering applies D-D-M-I-S phases to build reliable autonomous agent systems with measurable outcomes."
+
+memory:
+  type: ephemeral
+
+workers:
+  - id: summarizer
+    role: "Produce a concise summary of inputs.message preserving key facts"
+    model:
+      provider: openai
+      name: gpt-4.1-mini
+      temperature: 0.2
+    inputs:
+      - from: inputs.message
+    outputs:
+      name: Summary
+      format: text
+    timeout_seconds: 60
+    retries: 1
+    cost_budget_usd: 0.10
+
+evaluators:
+  - id: length_check
+    type: deterministic
+    runs_after: [summarizer]
+    implementation: evaluators.word_count_max
+  - id: quality_rubric
+    type: llm_rubric
+    runs_after: [summarizer]
+    rubric:
+      dimensions:
+        - name: fidelity
+          weight: 0.6
+          scale: [0, 1]
+          criteria: "Summary preserves key facts without distortion"
+        - name: concision
+          weight: 0.4
+          scale: [0, 1]
+          criteria: "No redundant phrasing; appropriate brevity"
+      pass_threshold: 0.80
+    model:
+      provider: openai
+      name: gpt-4.1-mini
+      temperature: 0
+
+feedback_channels:
+  - id: quality_to_summarizer
+    source: evaluators.quality_rubric
+    destination: workers.summarizer
+    format: structured
+    fields: [failure_codes, dimension_scores, remediation_hints]
+    max_tokens: 300
+    when: "score < pass_threshold"
+  - id: quality_to_optimizer
+    source: evaluators.quality_rubric
+    destination: optimization_strategy.prompt_refinement
+    format: structured
+    fields: [failure_codes, remediation_hints]
+    max_tokens: 200
+
+optimization_strategy:
+  type: prompt_refinement
+  max_steps: 5
+  config:
+    refinement_target: workers.summarizer
+    preserve_sections: [output_format]
+  rollback:
+    on_metric_drop: 0.05
+    on_safety_failure: true
+
+termination_conditions:
+  success:
+    - metric: primary_quality
+      operator: gte
+      value: 0.80
+      consecutive: 1
+  failure:
+    - type: safety_violation
+      action: halt
+    - type: max_iterations
+      value: 8
+      action: halt
+    - type: evaluator_error
+      consecutive: 2
+      action: halt
+  stall:
+    - metric: primary_quality
+      window_iterations: 3
+      min_improvement: 0.03
+      action: halt
+
+metrics:
+  - name: primary_quality
+    primary: true
+    definition: "Weighted score from quality_rubric evaluator"
+    source: evaluators.quality_rubric
+    unit: ratio
+    target: 0.80
+    regression_threshold: 0.05
+  - name: word_count
+    definition: "Word count of summarizer output"
+    source: evaluators.length_check
+    unit: count
+    target: 100
+  - name: cost_usd
+    definition: "Total API spend per loop run"
+    source: telemetry.cost
+    unit: usd
+    target: 0.25
+
+safety_constraints:
+  - id: injection-guard
+    type: injection_detect
+    scope: pre_worker
+    applies_to: [summarizer]
+    action: quarantine
+    severity: S0
+    on_error: halt
+    config:
+      ml_classifier: true
+      max_risk_score: 0.7
+  - id: secret-scan
+    type: secret_scan
+    scope: post_worker
+    applies_to: [summarizer]
+    action: halt
+    severity: S0
+    on_error: halt
+    config:
+      entropy_threshold: 4.5
+
+cost_limits:
+  per_iteration_usd: 0.15
+  cumulative_usd: 0.50
+  token_soft_cap: 8000
+  on_approach:
+    threshold_percent: 80
+    action: warn
+  on_exceed:
+    action: halt
