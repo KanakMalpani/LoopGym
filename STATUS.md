@@ -19,7 +19,7 @@
 - [x] ReplayEnv ↔ LoopNet seed integration
 - [x] CI: test workflow + LSS validation
 - [x] `SYNC.md` — canonical source policy
-- [ ] PyPI publish (`pip install loopgym` — pending trusted publisher or token on PyPI)
+- [x] PyPI publish — https://pypi.org/project/loopgym/
 
 ## Links
 
