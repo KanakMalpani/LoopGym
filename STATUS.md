@@ -19,11 +19,11 @@
 - [x] ReplayEnv ↔ LoopNet seed integration
 - [x] CI: test workflow + LSS validation
 - [x] `SYNC.md` — canonical source policy
-- [ ] PyPI publish workflow (optional — deferred)
+- [x] PyPI publish workflow (trusted publishing via GitHub Actions)
 
 ## Links
 
 - Parent workspace: [../README.md](../README.md)
 - Core specs: [../01-loop-engineering-core/](../01-loop-engineering-core/)
 - Agent brief: [../AGENT-BRIEF.md](../AGENT-BRIEF.md)
-- Discipline repo (source runtime): `C:\Users\mrkan\Loop Engineering`
+- Discipline repo (source runtime): https://github.com/KanakMalpani/Loop-Engineering

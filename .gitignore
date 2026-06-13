@@ -9,3 +9,8 @@ venv/
 dist/
 build/
 .DS_Store
+.env
+.env.*
+!.env.example
+*.pem
+credentials.json
