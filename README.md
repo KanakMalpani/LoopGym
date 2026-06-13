@@ -1,84 +1,89 @@
-<p align="center">
-  <strong>LoopGym</strong><br>
-  <em>OpenAI Gym for self-improving loops.</em>
-</p>
+<div align="center">
 
-<p align="center">
-  <a href="https://github.com/KanakMalpani/LoopGym/actions/workflows/test.yml"><img src="https://github.com/KanakMalpani/LoopGym/actions/workflows/test.yml/badge.svg" alt="CI"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT"></a>
-  <img src="https://img.shields.io/badge/python-3.12+-blue.svg" alt="Python 3.12+">
-  <a href="https://github.com/KanakMalpani/Loop-Core-Engineering"><img src="https://img.shields.io/badge/LSS-1.0.0-green.svg" alt="LSS 1.0"></a>
-  <img src="https://img.shields.io/badge/envs-5-blue.svg" alt="5 environments">
-</p>
+# LoopGym
+
+**Run any loop. Three ways. One API.**
+
+Compile [LSS 1.0](https://github.com/KanakMalpani/Loop-Core-Engineering) YAML into executable environments — simulate for CI, call live models for production eval, or replay [LoopNet](https://github.com/KanakMalpani/loopnet) trajectories without spending a token.
+
+<br>
+
+[![CI](https://github.com/KanakMalpani/LoopGym/actions/workflows/test.yml/badge.svg)](https://github.com/KanakMalpani/LoopGym/actions/workflows/test.yml)
+[![PyPI](https://img.shields.io/pypi/v/loopgym.svg)](https://pypi.org/project/loopgym/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
+[![LSS 1.0](https://img.shields.io/badge/LSS-1.0.0-green.svg)](https://github.com/KanakMalpani/Loop-Core-Engineering)
+
+<br>
+
+```bash
+pip install loopgym
+```
+
+<br>
+
+[**Quickstart**](#try-it-in-60-seconds) · [**API docs**](docs/api.md) · [**PyPI**](https://pypi.org/project/loopgym/) · [**LoopBench tasks**](https://github.com/KanakMalpani/LoopBench)
+
+</div>
 
 ---
 
-If **LSS** is how you *declare* a loop, **LoopGym** is how you *run* it.
+## The idea in one picture
 
-LoopGym compiles [LSS 1.0](https://github.com/KanakMalpani/Loop-Core-Engineering) YAML into executable environments — with deterministic simulation for CI, live model backends for production eval, and trajectory replay from [LoopNet](https://github.com/KanakMalpani/loopnet). One API. Three backends. Zero vendor lock-in on the spec.
+```mermaid
+flowchart TB
+  SPEC["Your LSS YAML"]
+  MAKE["loopgym.make(env_id)"]
+
+  SIM["SimEnv<br/><i>deterministic · free · CI-safe</i>"]
+  LIVE["LiveEnv<br/><i>real models · production eval</i>"]
+  REPLAY["ReplayEnv<br/><i>LoopNet trajectories · zero API cost</i>"]
+
+  SPEC --> MAKE
+  MAKE --> SIM
+  MAKE --> LIVE
+  MAKE --> REPLAY
+```
+
+**LSS declares the loop. LoopGym runs it.** [LoopBench](https://github.com/KanakMalpani/LoopBench) scores it. Clean separation — like Gym vs. benchmark suites in reinforcement learning.
+
+---
+
+## Three backends, one line of code
 
 ```python
 import loopgym as lg
 
 env = lg.make("loopbench/code-repair-v1")
 obs = env.reset(task_id="cr-001")
+
 while not env.done:
-    obs, reward, done, info = env.step(agent.action(obs))
+    action = your_agent.policy(obs)
+    obs, reward, done, info = env.step(action)
 ```
 
-<p align="center">
-  <a href="#-install--run"><strong>Install & run →</strong></a> ·
-  <a href="docs/api.md">API reference</a> ·
-  <a href="examples/quickstart.py">Quickstart script</a>
-</p>
+| Backend | When to use | API keys? |
+|---------|-------------|-----------|
+| **SimEnv** | CI, local dev, [LoopBench](https://github.com/KanakMalpani/LoopBench) v0.1 submissions | No |
+| **LiveEnv** | Production eval with real LLMs | `OPENAI_API_KEY` (pluggable) |
+| **ReplayEnv** | Analyze historical runs from LoopNet | No |
 
 ---
 
-## Why LoopGym
-
-| Problem | LoopGym answer |
-|---------|----------------|
-| Every benchmark rolls its own runner | Shared `loopgym.make(env_id)` registry |
-| CI can't afford API keys | **SimEnv** — deterministic, free, fast |
-| Production eval needs real models | **LiveEnv** — pluggable backends |
-| Historical analysis burns budget | **ReplayEnv** — LoopNet trajectories, no LLM calls |
-
-[LoopBench](https://github.com/KanakMalpani/LoopBench) defines tasks and scores them; LoopGym executes. Clean separation, like Gym vs. benchmark suites in RL.
-
----
-
-## Architecture
-
-```mermaid
-flowchart TB
-  LSS[LSS YAML spec]
-  COMP[LoopGym compiler]
-  SIM[SimEnv]
-  LIVE[LiveEnv]
-  REPLAY[ReplayEnv]
-  BENCH[LoopBench runner]
-
-  LSS --> COMP
-  COMP --> SIM
-  COMP --> LIVE
-  COMP --> REPLAY
-  SIM --> BENCH
-  LIVE --> BENCH
-  REPLAY --> BENCH
-```
-
----
-
-## ⚡ Install & run
-
-**One-liner (GitHub):**
+## Try it in 60 seconds
 
 ```bash
-pip install git+https://github.com/KanakMalpani/LoopGym.git
-python -c "import loopgym as lg; env = lg.make('loopbench/code-repair-v1'); print(env.reset(task_id='cr-001'))"
+pip install loopgym
+
+python -c "
+import loopgym as lg
+env = lg.make('loopbench/code-repair-v1')
+obs = env.reset(task_id='cr-001')
+print('task:', obs.task_id, '| step:', obs.step)
+"
 ```
 
-**Developer setup:**
+**Full quickstart:**
 
 ```bash
 git clone https://github.com/KanakMalpani/LoopGym.git && cd LoopGym
@@ -87,63 +92,43 @@ python examples/quickstart.py
 pytest tests/ -q
 ```
 
-**PyPI** (after first release — [PUBLISHING.md](PUBLISHING.md)):
+---
 
-```bash
-pip install loopgym
-```
+## Environments (v0.1)
+
+| Env ID | Backend | Stress-tests |
+|--------|---------|--------------|
+| `loopbench/code-repair-v1` | Sim | Verify-driven repair, iteration limits |
+| `loopbench/research-synthesis-v1` | Sim | Multi-step synthesis + rubric |
+| `loopbench/multi-agent-debate-v1` | Sim | Role-separated workers + evaluator |
+| `replay/loopnet-v1` | Replay | Full trajectories from [LoopNet](https://huggingface.co/datasets/KanakMalpani/loopnet-seed-v0.1) |
+| `sim/mock-llm-v1` | Sim | Generic sandbox for custom LSS specs |
+
+Bundled specs under [`envs/loopbench/`](envs/loopbench/) — validated against [Loop Core Engineering](https://github.com/KanakMalpani/Loop-Core-Engineering) in CI.
 
 ---
 
-## Environments
+## Who this is for
 
-| Env ID | Backend | Use case |
-|--------|---------|----------|
-| `loopbench/code-repair-v1` | SimEnv | Verify-driven code repair |
-| `loopbench/research-synthesis-v1` | SimEnv | Research brief synthesis |
-| `loopbench/multi-agent-debate-v1` | SimEnv | Multi-agent review / debate |
-| `replay/loopnet-v1` | ReplayEnv | Replay [LoopNet](https://github.com/KanakMalpani/loopnet) trajectories |
-| `sim/mock-llm-v1` | SimEnv | Generic mock-LLM sandbox |
-
-Bundled LSS specs live under [`envs/loopbench/`](envs/loopbench/). All validated against [Loop Core Engineering](https://github.com/KanakMalpani/Loop-Core-Engineering) in CI.
-
----
-
-## LoopNet replay (optional)
-
-```bash
-git clone https://github.com/KanakMalpani/loopnet.git ../loopnet
-# or: export LOOPNET_SEED_PATH=/path/to/records.jsonl
-```
-
-```python
-env = lg.make("replay/loopnet-v1")
-env.reset(record_id="ln-00042")
-```
+| You want to… | LoopGym gives you… |
+|--------------|-------------------|
+| **Benchmark your loop design** | Same env IDs [LoopBench](https://github.com/KanakMalpani/LoopBench) uses |
+| **Test without burning API budget** | SimEnv + ReplayEnv |
+| **Ship production eval pipelines** | LiveEnv with pluggable backends |
+| **Build a framework on LSS** | Registry pattern — `loopgym.make()` extensibility |
 
 ---
 
 ## Ecosystem
 
-| Repository | Role |
-|------------|------|
+| Repo | Role |
+|------|------|
 | [Loop Core Engineering](https://github.com/KanakMalpani/Loop-Core-Engineering) | LSS / LES authority |
 | [LoopNet](https://github.com/KanakMalpani/loopnet) | Trajectory corpus |
 | **LoopGym** | Runtime (this repo) |
-| [LoopBench](https://github.com/KanakMalpani/LoopBench) | Benchmark orchestration |
+| [LoopBench](https://github.com/KanakMalpani/LoopBench) | Public scoreboard |
 
-Full stack map: [ECOSYSTEM.md](https://github.com/KanakMalpani/Loop-Core-Engineering/blob/main/ECOSYSTEM.md)
-
----
-
-## Project layout
-
-| Path | Purpose |
-|------|---------|
-| [`loopgym/`](loopgym/) | Registry, envs, runtime, evaluators |
-| [`envs/loopbench/`](envs/loopbench/) | Task fixtures + LSS specs |
-| [`docs/api.md`](docs/api.md) | API reference |
-| [`examples/quickstart.py`](examples/quickstart.py) | Onboarding smoke test |
+Stack map: [ECOSYSTEM.md](https://github.com/KanakMalpani/Loop-Core-Engineering/blob/main/ECOSYSTEM.md)
 
 ---
 
@@ -154,12 +139,12 @@ Full stack map: [ECOSYSTEM.md](https://github.com/KanakMalpani/Loop-Core-Enginee
   title={LoopGym: OpenAI Gym for LSS-Defined Agent Loops},
   author={Malpani, Kanak},
   year={2026},
-  url={https://github.com/KanakMalpani/LoopGym}
+  url={https://pypi.org/project/loopgym/}
 }
 ```
 
----
+<div align="center">
 
-<p align="center">
-  <sub>MIT · v0.1 · <a href="CONTRIBUTING.md">Contributing</a> · <a href="SECURITY.md">Security</a> · <a href="PUBLISHING.md">PyPI</a></sub>
-</p>
+<sub>MIT · v0.1 · <a href="CONTRIBUTING.md">Contributing</a> · <a href="SECURITY.md">Security</a> · <a href="PUBLISHING.md">Publishing</a></sub>
+
+</div>
