@@ -22,7 +22,7 @@ pip install loopgym
 
 <br>
 
-[**Quickstart**](#try-it-in-60-seconds) · [**API docs**](docs/api.md) · [**PyPI**](https://pypi.org/project/loopgym/) · [**LoopBench tasks**](https://github.com/KanakMalpani/LoopBench)
+[**Quickstart**](#try-it-in-60-seconds) · [**API docs**](docs/api.md) · [**PyPI**](https://pypi.org/project/loopgym/) · [**LoopBench**](https://github.com/KanakMalpani/LoopBench) · [**Observability**](https://github.com/KanakMalpani/loop-observability)
 
 </div>
 
@@ -101,7 +101,7 @@ pytest tests/ -q
 | `loopbench/code-repair-v1` | Sim | Verify-driven repair, iteration limits |
 | `loopbench/research-synthesis-v1` | Sim | Multi-step synthesis + rubric |
 | `loopbench/multi-agent-debate-v1` | Sim | Role-separated workers + evaluator |
-| `replay/loopnet-v1` | Replay | Full trajectories from [LoopNet](https://huggingface.co/datasets/KanakMalpani/loopnet-seed-v0.1) |
+| `replay/loopnet-v1` | Replay | Full trajectories from [LoopNet v0.2](https://huggingface.co/datasets/KanakMalpani/loopnet-v0.2) |
 | `sim/mock-llm-v1` | Sim | Generic sandbox for custom LSS specs |
 
 Bundled specs under [`envs/loopbench/`](envs/loopbench/) — validated against [Loop Core Engineering](https://github.com/KanakMalpani/Loop-Core-Engineering) in CI.
@@ -115,7 +115,27 @@ Bundled specs under [`envs/loopbench/`](envs/loopbench/) — validated against [
 | **Benchmark your loop design** | Same env IDs [LoopBench](https://github.com/KanakMalpani/LoopBench) uses |
 | **Test without burning API budget** | SimEnv + ReplayEnv |
 | **Ship production eval pipelines** | LiveEnv with pluggable backends |
-| **Build a framework on LSS** | Registry pattern — `loopgym.make()` extensibility |
+| **Replay production-like runs** | ReplayEnv + [LoopNet corpus](https://github.com/KanakMalpani/loopnet) |
+| **Trace iterations & LES** | [`loopotel`](https://github.com/KanakMalpani/loop-observability) LTF export |
+
+---
+
+## Observability
+
+Trace loop iterations without raw chat logs ([LTF 0.1](https://github.com/KanakMalpani/loop-observability)):
+
+```bash
+pip install loopotel loopgym
+python -c "
+import loopgym as lg
+from loopotel.integrations.loopgym import run_traced_episode
+env = lg.make('loopbench/code-repair-v1')
+result, trace = run_traced_episode(env, task_id='cr-001', seed=0, enabled=True)
+print(result['success'], len(trace['spans']), 'spans')
+"
+```
+
+Full stack walkthrough: [LoopNet end-to-end tutorial](https://github.com/KanakMalpani/loopnet/blob/main/guides/END-TO-END-TUTORIAL.md).
 
 ---
 
@@ -127,6 +147,7 @@ Bundled specs under [`envs/loopbench/`](envs/loopbench/) — validated against [
 | [LoopNet](https://github.com/KanakMalpani/loopnet) | Trajectory corpus |
 | **LoopGym** | Runtime (this repo) |
 | [LoopBench](https://github.com/KanakMalpani/LoopBench) | Public scoreboard |
+| [loop-observability](https://github.com/KanakMalpani/loop-observability) | LTF traces (`loopotel`) |
 
 Stack map: [ECOSYSTEM.md](https://github.com/KanakMalpani/Loop-Core-Engineering/blob/main/ECOSYSTEM.md)
 
