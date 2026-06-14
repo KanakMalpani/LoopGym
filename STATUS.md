@@ -20,6 +20,7 @@
 - [x] CI: test workflow + LSS validation
 - [x] `SYNC.md` — canonical source policy
 - [x] PyPI publish — https://pypi.org/project/loopgym/
+- [x] `loopgym capture` → LoopNet export (v0.2 data pipeline)
 
 ## Links
 

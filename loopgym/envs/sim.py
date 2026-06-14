@@ -158,20 +158,31 @@ class SimEnv(LoopEnv):
 
     def run_episode(self, task_id: str = "", seed: int | None = None) -> dict[str, Any]:
         """Run full episode until done (convenience for benchmarks)."""
+        import time
+
         self.reset(task_id=task_id, seed=seed)
         total_reward = 0.0
         steps = 0
+        start = time.perf_counter()
         while not self.done:
             _, reward, _, info = self.step()
             total_reward += reward
             steps += 1
+        elapsed = time.perf_counter() - start
+        tokens_used = getattr(self._runtime.llm, "tokens_used", 0) if self._runtime else 0
         return {
             "task_id": self._task_id,
             "seed": self.seed,
+            "env_id": self.env_id,
             "steps": steps,
             "total_reward": total_reward,
             "success": info.get("success", False),
             "quality_score": self._obs.quality_score if self._obs else 0.0,
+            "termination_reason": (
+                self._state.termination_reason if self._state else info.get("termination_reason", "")
+            ),
+            "elapsed_seconds": round(elapsed, 3),
+            "tokens_used": tokens_used,
             "trajectory": [
                 {
                     "iteration": h["iteration"],

@@ -94,29 +94,35 @@ def make(
             records_path=records_path,
         )
 
+    inline_spec = kwargs.get("spec")
     spec_file = Path(spec_path) if spec_path else entry.get("spec")
-    if spec_file is None or not Path(spec_file).exists():
-        raise FileNotFoundError(
-            f"No LSS spec for '{normalized}'. Provide spec_path= or use a bundled env."
-        )
-    spec = load_lss_spec(spec_file)
+    if inline_spec is not None:
+        spec = inline_spec
+        spec_path_resolved = Path(spec_file) if spec_file else None
+    else:
+        if spec_file is None or not Path(spec_file).exists():
+            raise FileNotFoundError(
+                f"No LSS spec for '{normalized}'. Provide spec_path= or use a bundled env."
+            )
+        spec = load_lss_spec(spec_file)
+        spec_path_resolved = Path(spec_file)
     tasks_path = entry.get("tasks")
 
     if chosen_backend == "live":
         return LiveEnv(
             normalized,
             spec,
-            spec_path=Path(spec_file),
+            spec_path=spec_path_resolved,
             tasks_path=Path(tasks_path) if tasks_path else None,
             seed=seed,
-            **{k: v for k, v in kwargs.items() if k != "trajectory_path"},
+            **{k: v for k, v in kwargs.items() if k not in ("trajectory_path", "spec")},
         )
 
     return SimEnv(
         normalized,
         spec,
-        spec_path=Path(spec_file),
+        spec_path=spec_path_resolved,
         tasks_path=Path(tasks_path) if tasks_path and Path(tasks_path).exists() else None,
         seed=seed,
-        **{k: v for k, v in kwargs.items() if k != "trajectory_path"},
+        **{k: v for k, v in kwargs.items() if k not in ("trajectory_path", "spec")},
     )
