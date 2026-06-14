@@ -21,6 +21,7 @@
 - [x] `SYNC.md` — canonical source policy
 - [x] PyPI publish — https://pypi.org/project/loopgym/
 - [x] `loopgym capture` → LoopNet export (v0.2 data pipeline)
+- [x] ReplayEnv replays captured ln/record-v1 trajectories (v0.2 corpus + fixture tests)
 
 ## Links
 

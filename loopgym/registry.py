@@ -34,8 +34,8 @@ _REGISTRY: dict[str, dict[str, Any]] = {
     },
     "replay/loopnet-v1": {
         "backend": "replay",
-        "records_path": _PACKAGE_ROOT.parent / "04-loopnet" / "data" / "seed" / "records.jsonl",
-        "description": "Replay LoopNet ln/record-v1 trajectories from seed corpus",
+        "records_path": _PACKAGE_ROOT.parent / "04-loopnet" / "data" / "v0.2" / "records.jsonl",
+        "description": "Replay LoopNet ln/record-v1 trajectories (v0.2 corpus preferred)",
     },
     "sim/mock-llm-v1": {
         "backend": "sim",

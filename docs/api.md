@@ -77,7 +77,7 @@ Reproducibility: trajectories are deterministic given `(seed, task_id, loop_name
 
 ### ReplayEnv (`replay`)
 
-Replay LoopNet `ln/record-v1` trajectories from JSONL (default: sibling `04-loopnet/data/seed/records.jsonl`).
+Replay LoopNet `ln/record-v1` trajectories from JSONL (default: sibling `04-loopnet/data/v0.2/records.jsonl`, then seed fallback).
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
@@ -109,7 +109,7 @@ env = lg.make("loopbench/code-repair-v1", backend="live")
 | `loopbench/code-repair-v1` | LB-CR-1 | Verify-driven code repair |
 | `loopbench/research-synthesis-v1` | LB-RS-1 | Research brief synthesis |
 | `loopbench/multi-agent-debate-v1` | LB-MA-1 | Multi-agent debate / review |
-| `replay/loopnet-v1` | — | LoopNet trajectory replay (stub) |
+| `replay/loopnet-v1` | — | LoopNet trajectory replay (seed + captured v0.2) |
 | `sim/mock-llm-v1` | — | Generic mock loop |
 
 Env ID format per [loop-ids.md](https://github.com/loop-engineering/core): `lg/{family}/{name}-v{major}`.

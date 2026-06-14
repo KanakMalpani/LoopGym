@@ -5,21 +5,34 @@ from __future__ import annotations
 import json
 import os
 import random
+import time
 from pathlib import Path
 from typing import Any
 
 from loopgym.envs.base import LoopEnv, Observation
 
 
-def _default_loopnet_seed_path() -> Path | None:
-    """Resolve LoopNet seed corpus from env, sibling clone, or CI deps layout."""
+def is_captured_record(record: dict[str, Any]) -> bool:
+    """True when the record came from LoopGym capture (not synthetic seed)."""
+    tags = (record.get("metadata") or {}).get("tags") or []
+    if "captured" in tags:
+        return True
+    return record.get("source") == "case_study"
+
+
+def _resolve_loopnet_corpus_path() -> Path | None:
+    """Resolve LoopNet JSONL from env, sibling clone, or CI deps layout."""
     loopgym_root = Path(__file__).resolve().parents[2]
     candidates: list[Path] = []
-    env_path = os.environ.get("LOOPNET_SEED_PATH")
-    if env_path:
-        candidates.append(Path(env_path))
+    for env_key in ("LOOPNET_RECORDS_PATH", "LOOPNET_SEED_PATH"):
+        env_path = os.environ.get(env_key)
+        if env_path:
+            candidates.append(Path(env_path))
     candidates.extend(
         [
+            loopgym_root.parent / "04-loopnet" / "data" / "v0.2" / "records.jsonl",
+            loopgym_root.parent / "loopnet" / "data" / "v0.2" / "records.jsonl",
+            loopgym_root / "deps" / "loopnet" / "data" / "v0.2" / "records.jsonl",
             loopgym_root.parent / "04-loopnet" / "data" / "seed" / "records.jsonl",
             loopgym_root.parent / "loopnet" / "data" / "seed" / "records.jsonl",
             loopgym_root / "deps" / "loopnet" / "data" / "seed" / "records.jsonl",
@@ -29,6 +42,11 @@ def _default_loopnet_seed_path() -> Path | None:
         if candidate.exists():
             return candidate
     return None
+
+
+def _default_loopnet_seed_path() -> Path | None:
+    """Backward-compatible alias for corpus resolution."""
+    return _resolve_loopnet_corpus_path()
 
 
 def load_loopnet_records(path: Path) -> list[dict[str, Any]]:
@@ -44,6 +62,11 @@ def load_loopnet_records(path: Path) -> list[dict[str, Any]]:
             except json.JSONDecodeError as exc:
                 raise ValueError(f"{path}:{line_no}: invalid JSON — {exc}") from exc
     return records
+
+
+def find_captured_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Return records produced by LoopGym capture."""
+    return [record for record in records if is_captured_record(record)]
 
 
 def record_to_trajectory(record: dict[str, Any]) -> list[dict[str, Any]]:
@@ -83,7 +106,7 @@ class ReplayEnv(LoopEnv):
         if resolved_records and resolved_records.exists():
             self.records_path = resolved_records
         else:
-            self.records_path = _default_loopnet_seed_path()
+            self.records_path = _resolve_loopnet_corpus_path()
         self._records: list[dict[str, Any]] = []
         self._record: dict[str, Any] | None = None
         self._trajectory: list[dict[str, Any]] = []
@@ -146,6 +169,8 @@ class ReplayEnv(LoopEnv):
 
         step = self._trajectory[0]
         objective = str((self._record or {}).get("objective", "Replay LoopNet trajectory"))
+        record_meta = self._record or {}
+        les = record_meta.get("les_observed") or {}
         self._obs = Observation(
             task_id=self._task_id,
             iteration=int(step.get("iteration", 1)),
@@ -156,8 +181,12 @@ class ReplayEnv(LoopEnv):
             info={
                 "mode": "replay",
                 "total_steps": len(self._trajectory),
-                "record_id": (self._record or {}).get("record_id"),
-                "outcome": (self._record or {}).get("outcome"),
+                "record_id": record_meta.get("record_id"),
+                "outcome": record_meta.get("outcome"),
+                "source": record_meta.get("source"),
+                "captured": is_captured_record(record_meta) if record_meta else False,
+                "les_observed": les.get("les_normalized"),
+                "env_id": (record_meta.get("loop_spec") or {}).get("extensions", {}).get("env_id"),
             },
         )
         return self._obs
@@ -180,6 +209,11 @@ class ReplayEnv(LoopEnv):
         quality = float(step.get("quality_score", 0.0))
         self._done = self._index >= len(self._trajectory) - 1
         objective = str((self._record or {}).get("objective", "Replay LoopNet trajectory"))
+        record_meta = self._record or {}
+        outcome = record_meta.get("outcome")
+        success = outcome == "success" or quality >= float(
+            (record_meta.get("metadata") or {}).get("goal_target", 0.0)
+        )
         self._obs = Observation(
             task_id=self._task_id,
             iteration=int(step.get("iteration", self._index + 1)),
@@ -190,8 +224,65 @@ class ReplayEnv(LoopEnv):
             info={
                 "mode": "replay",
                 "step_index": self._index,
-                "record_id": (self._record or {}).get("record_id"),
+                "record_id": record_meta.get("record_id"),
                 "failure_codes": step.get("failure_codes", []),
+                "captured": is_captured_record(record_meta) if record_meta else False,
+                "success": success if self._done else False,
             },
         )
-        return self._obs, quality, self._done, {"step_index": self._index}
+        info: dict[str, Any] = {"step_index": self._index}
+        if self._done:
+            info["success"] = success
+            info["termination_reason"] = record_meta.get("termination_reason", "trajectory_exhausted")
+        return self._obs, quality, self._done, info
+
+    def run_episode(
+        self,
+        task_id: str = "",
+        seed: int | None = None,
+        *,
+        record_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Run full replay until the stored trajectory is exhausted."""
+        reset_kwargs: dict[str, Any] = {}
+        if record_id:
+            reset_kwargs["record_id"] = record_id
+        self.reset(task_id=task_id, seed=seed, **reset_kwargs)
+        total_reward = 0.0
+        steps = 0
+        start = time.perf_counter()
+        info: dict[str, Any] = {}
+        while not self.done:
+            _, reward, _, info = self.step()
+            total_reward += reward
+            steps += 1
+        elapsed = time.perf_counter() - start
+        record_meta = self._record or {}
+        final_quality = self._obs.quality_score if self._obs else 0.0
+        goal_target = float((record_meta.get("metadata") or {}).get("goal_target", 0.0))
+        outcome = record_meta.get("outcome")
+        success = info.get("success", False) or outcome == "success" or final_quality >= goal_target
+        return {
+            "task_id": self._task_id,
+            "seed": seed,
+            "env_id": self.env_id,
+            "record_id": record_meta.get("record_id"),
+            "captured": is_captured_record(record_meta) if record_meta else False,
+            "steps": steps,
+            "total_reward": total_reward,
+            "success": success,
+            "quality_score": final_quality,
+            "termination_reason": info.get("termination_reason", record_meta.get("termination_reason", "")),
+            "elapsed_seconds": round(elapsed, 3),
+            "tokens_used": 0,
+            "outcome": outcome,
+            "les_observed": (record_meta.get("les_observed") or {}).get("les_normalized"),
+            "trajectory": [
+                {
+                    "iteration": step.get("iteration"),
+                    "output": step.get("output"),
+                    "quality_score": step.get("quality_score"),
+                }
+                for step in self._trajectory
+            ],
+        }
