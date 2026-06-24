@@ -133,6 +133,11 @@ def make(
     tasks_path = entry.get("tasks")
 
     if chosen_backend == "composed":
+        bundled_spec_path = Path(entry["spec"])
+        if spec.get("composition") and spec_path is not None:
+            # Submitter passes full composition YAML; runtime uses bundled orchestrator.
+            spec = load_lss_spec(bundled_spec_path)
+            spec_path_resolved = bundled_spec_path
         branches_raw = entry.get("branches") or []
         branches: list[tuple[str, Path, Path | None]] = []
         for item in branches_raw:
