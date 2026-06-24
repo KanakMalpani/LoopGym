@@ -107,7 +107,7 @@ Ran a replay or SimEnv episode? Follow [REPRODUCE.md](https://github.com/KanakMa
 | `loopbench/code-repair-v1` | Sim | Verify-driven repair, iteration limits |
 | `loopbench/research-synthesis-v1` | Sim | Multi-step synthesis + rubric |
 | `loopbench/multi-agent-debate-v1` | Sim | Role-separated workers + evaluator |
-| `loopbench/composed-swarm-v1` | Sim | Composed parallel rehearsal ([scenario-swarm-rehearsal](https://github.com/KanakMalpani/Loop-Engineering/blob/main/loop-library/compositions/scenario-swarm-rehearsal.yaml)) — spec v0.2 |
+| `loopbench/composed-swarm-v1` | Sim | Composed parallel rehearsal ([scenario-swarm-rehearsal](https://github.com/KanakMalpani/Loop-Engineering/blob/main/loop-library/compositions/scenario-swarm-rehearsal.yaml)) — LB-COMP-1 |
 | `replay/loopnet-v1` | Replay | Full trajectories from [LoopNet v0.2](https://huggingface.co/datasets/KanakMalpani/loopnet-v0.2) |
 | `sim/mock-llm-v1` | Sim | Generic sandbox for custom LSS specs |
 
