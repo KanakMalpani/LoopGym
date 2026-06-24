@@ -9,6 +9,7 @@ inputs:
   schema:
     task:
       type: string
+      description: "Top-level decision or scenario to rehearse across parallel branches"
       required: true
   examples:
     - task: "Rehearse go/no-go decision for Q3 platform migration."
@@ -73,10 +74,15 @@ termination_conditions:
 metrics:
   - name: composite_quality
     primary: true
+    definition: "Orchestrator merge rubric score after parallel branch synthesis"
     source: evaluators.composite_gate
+    unit: ratio
     target: 0.80
 
+safety_constraints: []
+
 cost_limits:
+  per_iteration_usd: 0.20
   cumulative_usd: 2.00
   token_soft_cap: 12000
   on_exceed:
