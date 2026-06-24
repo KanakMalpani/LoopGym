@@ -10,6 +10,15 @@ def test_list_envs_includes_loopbench():
     assert "loopbench/code-repair-v1" in envs
     assert "loopbench/research-synthesis-v1" in envs
     assert "loopbench/multi-agent-debate-v1" in envs
+    assert "loopbench/composed-swarm-v1" in envs
+
+
+def test_composed_swarm_episode():
+    env = lg.make("loopbench/composed-swarm-v1")
+    result = env.run_episode(task_id="comp-001", seed=7)
+    assert result["steps"] > 0
+    assert len(result.get("branches", [])) == 3
+    assert result["quality_score"] > 0
 
 
 def test_make_unknown_env_raises():

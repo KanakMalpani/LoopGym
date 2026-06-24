@@ -1,0 +1,26 @@
+{
+  "task_family": "LB-COMP-1",
+  "tasks": [
+    {
+      "id": "comp-001",
+      "difficulty": "high",
+      "input": {
+        "task": "Should we launch the composed-agent beta to 10% of users this quarter?"
+      }
+    },
+    {
+      "id": "comp-002",
+      "difficulty": "medium",
+      "input": {
+        "task": "Evaluate vendor switch vs. in-house build for observability stack."
+      }
+    },
+    {
+      "id": "comp-003",
+      "difficulty": "low",
+      "input": {
+        "task": "Rehearse incident response for multi-region failover drill."
+      }
+    }
+  ]
+}

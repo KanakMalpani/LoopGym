@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from loopgym.envs.composed import ComposedSimEnv
 from loopgym.envs.live import LiveEnv
 from loopgym.envs.replay import ReplayEnv
 from loopgym.envs.sim import SimEnv
@@ -31,6 +32,29 @@ _REGISTRY: dict[str, dict[str, Any]] = {
         "spec": _ENVS_ROOT / "multi-agent-debate-v1" / "spec.yaml",
         "tasks": _ENVS_ROOT / "multi-agent-debate-v1" / "tasks.json",
         "description": "Multi-agent review debate loop (LB-MA-1)",
+    },
+    "loopbench/composed-swarm-v1": {
+        "backend": "composed",
+        "spec": _ENVS_ROOT / "composed-swarm-v1" / "spec.yaml",
+        "tasks": _ENVS_ROOT / "composed-swarm-v1" / "tasks.json",
+        "branches": [
+            (
+                "falsifier",
+                _ENVS_ROOT / "research-synthesis-v1" / "spec.yaml",
+                _ENVS_ROOT / "research-synthesis-v1" / "tasks.json",
+            ),
+            (
+                "evidence",
+                _ENVS_ROOT / "multi-agent-debate-v1" / "spec.yaml",
+                _ENVS_ROOT / "multi-agent-debate-v1" / "tasks.json",
+            ),
+            (
+                "operator",
+                _ENVS_ROOT / "code-repair-v1" / "spec.yaml",
+                _ENVS_ROOT / "code-repair-v1" / "tasks.json",
+            ),
+        ],
+        "description": "Composed parallel swarm rehearsal (LB-COMP-1)",
     },
     "replay/loopnet-v1": {
         "backend": "replay",
@@ -65,7 +89,7 @@ def make(
     backend: str | None = None,
     seed: int = 0,
     **kwargs: Any,
-) -> SimEnv | ReplayEnv | LiveEnv:
+) -> SimEnv | ComposedSimEnv | ReplayEnv | LiveEnv:
     """Create a loop environment by ID.
 
     Args:
@@ -107,6 +131,25 @@ def make(
         spec = load_lss_spec(spec_file)
         spec_path_resolved = Path(spec_file)
     tasks_path = entry.get("tasks")
+
+    if chosen_backend == "composed":
+        branches_raw = entry.get("branches") or []
+        branches: list[tuple[str, Path, Path | None]] = []
+        for item in branches_raw:
+            if len(item) == 3:
+                bid, spath, tpath = item
+                branches.append((bid, Path(spath), Path(tpath) if tpath else None))
+            else:
+                bid, spath = item
+                branches.append((bid, Path(spath), Path(spath).parent / "tasks.json"))
+        return ComposedSimEnv(
+            normalized,
+            spec,
+            spec_path_resolved or Path(entry["spec"]),
+            Path(tasks_path) if tasks_path else None,
+            branches,
+            seed=seed,
+        )
 
     if chosen_backend == "live":
         return LiveEnv(
