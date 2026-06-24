@@ -94,6 +94,12 @@ pytest tests/ -q
 
 ---
 
+## Validate and reproduce
+
+Ran a replay or SimEnv episode? Follow [REPRODUCE.md](https://github.com/KanakMalpani/Loop-Engineering/blob/main/contributions/REPRODUCE.md) and post on [Discussion #10](https://github.com/KanakMalpani/Loop-Engineering/discussions/10). Export trajectories via [loopnet COMMUNITY-SUBMISSION](https://github.com/KanakMalpani/loopnet/blob/main/guides/COMMUNITY-SUBMISSION.md).
+
+---
+
 ## Environments (v0.1)
 
 | Env ID | Backend | Stress-tests |
