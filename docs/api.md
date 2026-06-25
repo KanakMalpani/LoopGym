@@ -49,9 +49,13 @@ Advance one loop iteration:
 
 Whether the episode has terminated.
 
-### `env.run_episode(task_id="", seed=None) -> dict` (SimEnv only)
+### `env.run_episode(task_id="", seed=None, *, trace_path=None) -> dict` (SimEnv / ComposedSimEnv)
 
 Run until termination; returns trajectory summary for benchmarking.
+
+When the episode finishes, the result includes a **`loop_trace`** field — a [Loop Trace 1.0](https://github.com/KanakMalpani/Loop-Engineering/blob/main/standards/LOOP-TRACE-1.0.md) document suitable for `loopctl trace validate` and observed LES scoring.
+
+Pass **`trace_path="path/to/trace.json"`** to write the trace file on disk; the returned dict then includes **`trace_path`**.
 
 ## Observation
 
