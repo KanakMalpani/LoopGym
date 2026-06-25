@@ -29,6 +29,27 @@ def test_make_unknown_env_raises():
         assert "unknown/env-v1" in str(exc)
 
 
+def test_episode_includes_loop_trace():
+    env = lg.make("loopbench/code-repair-v1")
+    result = env.run_episode(task_id="cr-001", seed=42)
+    trace = result["loop_trace"]
+    assert trace["trace_version"] == "1.0"
+    assert trace["loop_name"]
+    assert trace["started_at"]
+    assert len(trace["iterations"]) >= 1
+    assert "quality" in trace["iterations"][-1]["evaluator_scores"]
+
+
+def test_run_episode_writes_trace_file(tmp_path):
+    env = lg.make("loopbench/code-repair-v1")
+    out = tmp_path / "episode-trace.json"
+    result = env.run_episode(task_id="cr-001", seed=42, trace_path=out)
+    assert out.exists()
+    assert result["trace_path"] == str(out)
+    data = out.read_text(encoding="utf-8")
+    assert '"trace_version": "1.0"' in data
+
+
 def test_quickstart_episode_completes():
     env = lg.make("loopbench/code-repair-v1")
     result = env.run_episode(task_id="cr-001", seed=42)

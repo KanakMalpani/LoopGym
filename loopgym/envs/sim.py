@@ -156,31 +156,47 @@ class SimEnv(LoopEnv):
         )
         return self._obs, reward, self._done, info
 
-    def run_episode(self, task_id: str = "", seed: int | None = None) -> dict[str, Any]:
+    def run_episode(
+        self,
+        task_id: str = "",
+        seed: int | None = None,
+        *,
+        trace_path: str | Path | None = None,
+    ) -> dict[str, Any]:
         """Run full episode until done (convenience for benchmarks)."""
         import time
 
+        from loopgym.trace import build_loop_trace, utc_now, write_loop_trace
+
+        started_at = utc_now()
         self.reset(task_id=task_id, seed=seed)
         total_reward = 0.0
         steps = 0
         start = time.perf_counter()
+        last_info: dict[str, Any] = {}
         while not self.done:
             _, reward, _, info = self.step()
             total_reward += reward
             steps += 1
+            last_info = info
         elapsed = time.perf_counter() - start
         tokens_used = getattr(self._runtime.llm, "tokens_used", 0) if self._runtime else 0
-        return {
+        success = bool(last_info.get("success", False))
+        termination = (
+            self._state.termination_reason if self._state else last_info.get("termination_reason", "")
+        )
+        total_cost = tokens_used * 0.000002
+        loop_id = f"{self.env_id}:{self._task_id}:{self.seed}"
+
+        result = {
             "task_id": self._task_id,
             "seed": self.seed,
             "env_id": self.env_id,
             "steps": steps,
             "total_reward": total_reward,
-            "success": info.get("success", False),
+            "success": success,
             "quality_score": self._obs.quality_score if self._obs else 0.0,
-            "termination_reason": (
-                self._state.termination_reason if self._state else info.get("termination_reason", "")
-            ),
+            "termination_reason": termination,
             "elapsed_seconds": round(elapsed, 3),
             "tokens_used": tokens_used,
             "trajectory": [
@@ -192,3 +208,19 @@ class SimEnv(LoopEnv):
                 for h in (self._state.history if self._state else [])
             ],
         }
+
+        trace = build_loop_trace(
+            self.spec,
+            loop_id=loop_id,
+            success=success,
+            termination_reason=termination or "unknown",
+            history=self._state.history if self._state else [],
+            total_cost_usd=total_cost,
+            started_at=started_at,
+            spec_path=str(self.spec_path) if self.spec_path else "",
+            metadata={"env_id": self.env_id, "task_id": self._task_id, "seed": self.seed},
+        )
+        result["loop_trace"] = trace
+        if trace_path is not None:
+            result["trace_path"] = str(write_loop_trace(trace, trace_path))
+        return result

@@ -127,18 +127,29 @@ class ComposedSimEnv(LoopEnv):
     def done(self) -> bool:
         return self._done or (self._orch.done if self._orch else False)
 
-    def run_episode(self, task_id: str = "", seed: int | None = None) -> dict[str, Any]:
+    def run_episode(
+        self,
+        task_id: str = "",
+        seed: int | None = None,
+        *,
+        trace_path: str | Path | None = None,
+    ) -> dict[str, Any]:
         import time
 
+        from loopgym.trace import build_loop_trace, utc_now, write_loop_trace
+
+        started_at = utc_now()
         self.reset(task_id=task_id, seed=seed)
         assert self._orch is not None
         total_reward = 0.0
         steps = 0
         start = time.perf_counter()
+        last_info: dict[str, Any] = {}
         while not self.done:
             _, reward, _, info = self.step()
             total_reward += reward
             steps += 1
+            last_info = info
         elapsed = time.perf_counter() - start
 
         branch_scores = [b.get("quality_score", 0.0) for b in self._branch_episodes]
@@ -146,20 +157,24 @@ class ComposedSimEnv(LoopEnv):
         composite = min(0.99, (sum(branch_scores) / max(len(branch_scores), 1)) * 0.55 + orch_score * 0.45)
         branch_tokens = sum(b.get("tokens_used", 0) for b in self._branch_episodes)
         orch_tokens = getattr(self._orch._runtime.llm, "tokens_used", 0) if self._orch._runtime else 0
+        success = last_info.get("success", False) or composite >= 0.80
+        termination = (
+            self._orch._state.termination_reason if self._orch._state else last_info.get("termination_reason", "")
+        )
+        total_cost = (branch_tokens + orch_tokens) * 0.000002
+        loop_id = f"{self.env_id}:{self._task_id}:{self.seed}"
 
-        return {
+        result = {
             "task_id": self._task_id,
             "seed": self.seed,
             "env_id": self.env_id,
             "steps": steps + sum(b.get("steps", 0) for b in self._branch_episodes),
             "total_reward": total_reward,
-            "success": info.get("success", False) or composite >= 0.80,
+            "success": success,
             "quality_score": round(composite, 4),
             "orchestrator_score": orch_score,
             "branch_scores": branch_scores,
-            "termination_reason": (
-                self._orch._state.termination_reason if self._orch._state else info.get("termination_reason", "")
-            ),
+            "termination_reason": termination,
             "elapsed_seconds": round(elapsed, 3),
             "tokens_used": branch_tokens + orch_tokens,
             "branches": self._branch_episodes,
@@ -172,3 +187,23 @@ class ComposedSimEnv(LoopEnv):
                 for h in (self._orch._state.history if self._orch._state else [])
             ],
         }
+
+        trace = build_loop_trace(
+            self.orchestrator_spec,
+            loop_id=loop_id,
+            success=bool(success),
+            termination_reason=termination or "unknown",
+            history=self._orch._state.history if self._orch._state else [],
+            total_cost_usd=total_cost,
+            started_at=started_at,
+            spec_path=str(self.orchestrator_spec_path),
+            metadata={
+                "env_id": self.env_id,
+                "composition": "parallel",
+                "branch_count": len(self._branch_episodes),
+            },
+        )
+        result["loop_trace"] = trace
+        if trace_path is not None:
+            result["trace_path"] = str(write_loop_trace(trace, trace_path))
+        return result
