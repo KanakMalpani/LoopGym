@@ -1,81 +1,82 @@
-loop_name: rag-retrieval-loop
+loop_name: research-synthesis-loop
 version: 1.0.0
 
 objective: >
-  Answer inputs.query grounded in retrieved sources, achieving primary_quality
-  >= 0.85 within cost_limits even when the corpus is incomplete or contains
-  stale documents.
+  Produce a research brief answering inputs.query with at least three sources,
+  weighted rubric score >= 0.85, valid citations, terminating within cost_limits.
 
 inputs:
   schema:
     query:
       type: string
-      description: "Question to answer from the retrieved corpus"
+      description: "Research question to investigate"
       required: true
       max_length: 2000
-    corpus:
-      type: string
-      description: "Identifier for the retrieval corpus fixture"
-      required: false
+    depth:
+      type: enum
+      description: "Research thoroughness level"
+      values: [quick, standard, deep]
+      default: standard
   examples:
-    - query: "What changed in the v0.2 retrieval index?"
-      corpus: "fixtures/docs-v0.2"
+    - query: "What are commercialization timelines for solid-state batteries?"
+      depth: standard
 
 memory:
   type: session
   backend: composite
   retention:
     unit: iteration
-    value: 8
+    value: 10
 
 workers:
-  - id: retriever
-    role: "Retrieve candidate passages and flag missing or stale sources"
+  - id: researcher
+    role: "Discover primary sources and extract verifiable claims"
     model:
       provider: openai
       name: gpt-4.1-mini
-      temperature: 0.2
+      temperature: 0.3
     inputs:
       - from: inputs.query
+      - from: inputs.depth
     outputs:
-      name: RetrievedContext
+      name: ResearchNotes
       format: json
-    timeout_seconds: 120
-    cost_budget_usd: 0.25
+    timeout_seconds: 180
+    cost_budget_usd: 0.50
 
-  - id: answerer
-    role: "Synthesize a grounded answer with citations from retrieved context"
+  - id: writer
+    role: "Synthesize research notes into a structured brief with citations"
     model:
       provider: openai
       name: gpt-4.1-mini
       temperature: 0.2
-    depends_on: [retriever]
+    depends_on: [researcher]
     inputs:
       - from: inputs.query
     outputs:
-      name: Answer
+      name: Brief
       format: markdown
     timeout_seconds: 120
-    cost_budget_usd: 0.25
+    cost_budget_usd: 0.30
 
 evaluators:
-  - id: grounding_check
+  - id: citation_check
     type: deterministic
-    runs_after: [answerer]
+    runs_after: [writer]
     implementation: evaluators.citation_count_min
   - id: quality_rubric
     type: llm_rubric
-    runs_after: [answerer]
+    runs_after: [writer]
     rubric:
       dimensions:
-        - name: faithfulness
-          weight: 0.6
+        - name: coverage
+          weight: 0.5
           scale: [0, 1]
-          criteria: "Answer is grounded in retrieved sources, no hallucination"
-        - name: completeness
-          weight: 0.4
+          criteria: "Brief addresses all aspects of the query"
+        - name: evidence
+          weight: 0.5
           scale: [0, 1]
-          criteria: "Answer covers the query despite corpus perturbations"
+          criteria: "Claims supported by cited sources"
       pass_threshold: 0.85
     model:
       provider: openai
@@ -83,9 +84,9 @@ evaluators:
       temperature: 0
 
 feedback_channels:
-  - id: rubric_to_answerer
+  - id: rubric_to_writer
     source: evaluators.quality_rubric
-    destination: workers.answerer
+    destination: workers.writer
     format: structured
     fields: [failure_codes, dimension_scores, remediation_hints]
 
@@ -93,7 +94,7 @@ optimization_strategy:
   type: prompt_refinement
   max_steps: 5
   config:
-    refinement_target: workers.answerer
+    refinement_target: workers.writer
 
 termination_conditions:
   success:
@@ -112,21 +113,21 @@ metrics:
     source: evaluators.quality_rubric
     unit: ratio
     target: 0.85
-  - name: grounding_validity
-    definition: "Citations meet minimum grounding threshold"
-    source: evaluators.grounding_check
+  - name: citation_validity
+    definition: "Citation count meets minimum"
+    source: evaluators.citation_check
     unit: ratio
     target: 1.0
   - name: cost_usd
     definition: "Total API spend"
     source: telemetry.cost
     unit: usd
-    target: 0.50
+    target: 0.75
 
 safety_constraints: []
 
 cost_limits:
-  per_iteration_usd: 0.20
-  cumulative_usd: 0.50
+  per_iteration_usd: 0.25
+  cumulative_usd: 0.75
   on_exceed:
     action: halt

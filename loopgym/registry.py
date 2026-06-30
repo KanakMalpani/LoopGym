@@ -12,8 +12,9 @@ from loopgym.envs.perturbed_sim import PerturbedSimEnv
 from loopgym.envs.sim import SimEnv
 from loopgym.runtime.loop_runtime import load_lss_spec
 
-_PACKAGE_ROOT = Path(__file__).resolve().parent.parent
-_ENVS_ROOT = _PACKAGE_ROOT / "envs" / "loopbench"
+_PACKAGE_DIR = Path(__file__).resolve().parent
+_PACKAGE_ROOT = _PACKAGE_DIR.parent
+_ENVS_ROOT = _PACKAGE_DIR / "envs" / "loopbench"
 
 _REGISTRY: dict[str, dict[str, Any]] = {
     "loopbench/code-repair-v1": {
@@ -82,8 +83,8 @@ _REGISTRY: dict[str, dict[str, Any]] = {
     },
     "sim/mock-llm-v1": {
         "backend": "sim",
-        "spec": _PACKAGE_ROOT.parent / "examples" / "minimal-loop.yaml",
-        "description": "Generic mock-LLM loop using minimal LSS example",
+        "spec": _ENVS_ROOT / "code-repair-v1" / "spec.yaml",
+        "description": "Generic mock-LLM loop using bundled code-repair spec",
     },
 }
 

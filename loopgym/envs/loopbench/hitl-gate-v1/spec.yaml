@@ -1,69 +1,142 @@
 loop_name: hitl-gate-loop
 version: 1.0.0
-objective: Execute agent steps with simulated human approval gates.
+
+objective: >
+  Complete inputs.task while routing high-risk steps through a human approval
+  gate, achieving primary_quality >= 0.80 within cost_limits and halting cleanly
+  when a reviewer rejects a step.
+
 inputs:
   schema:
     task:
       type: string
+      description: "Task that may require human approval before acting"
       required: true
+      max_length: 2000
+    risk_level:
+      type: enum
+      description: "Initial risk assessment"
+      values: [low, medium, high]
+      default: medium
   examples:
-    - task: Deploy configuration change to staging
+    - task: "Deploy the migration to the staging database"
+      risk_level: high
+
 memory:
-  type: ephemeral
+  type: session
+  retention:
+    unit: iteration
+    value: 6
+
 workers:
   - id: planner
-    role: Propose action plan awaiting human approval
+    role: "Draft an action plan and mark steps that require human approval"
     model:
       provider: openai
       name: gpt-4.1-mini
       temperature: 0.2
     inputs:
       - from: inputs.task
+      - from: inputs.risk_level
     outputs:
       name: Plan
-      format: text
+      format: json
+    timeout_seconds: 120
+    cost_budget_usd: 0.25
+
   - id: executor
-    role: Execute approved plan steps
+    role: "Execute approved steps and pause on gated steps for review"
     model:
       provider: openai
       name: gpt-4.1-mini
-      temperature: 0.1
+      temperature: 0.2
+    depends_on: [planner]
     inputs:
-      - from: workers.planner.outputs
+      - from: inputs.task
     outputs:
       name: Result
-      format: text
+      format: markdown
+    timeout_seconds: 120
+    cost_budget_usd: 0.25
+
 evaluators:
   - id: approval_gate
+    type: deterministic
+    runs_after: [executor]
+    implementation: evaluators.approval_required
+  - id: quality_rubric
     type: llm_rubric
-    runs_after: [planner]
+    runs_after: [executor]
     rubric:
       dimensions:
-        - name: safety
-          weight: 1.0
+        - name: correctness
+          weight: 0.6
           scale: [0, 1]
-          criteria: Plan is safe and reversible
-      pass_threshold: 0.8
+          criteria: "Approved actions achieve the task"
+        - name: gate_compliance
+          weight: 0.4
+          scale: [0, 1]
+          criteria: "High-risk steps are gated, rejections halt cleanly"
+      pass_threshold: 0.80
+    model:
+      provider: openai
+      name: gpt-4.1-mini
+      temperature: 0
+
+feedback_channels:
+  - id: rubric_to_executor
+    source: evaluators.quality_rubric
+    destination: workers.executor
+    format: structured
+    fields: [failure_codes, dimension_scores, remediation_hints]
+
 optimization_strategy:
   type: prompt_refinement
-  max_steps: 5
+  max_steps: 6
+  config:
+    refinement_target: workers.executor
+
 termination_conditions:
   success:
     - metric: primary_quality
       operator: gte
-      value: 0.8
+      value: 0.80
   failure:
     - type: max_iterations
-      value: 5
+      value: 6
       action: halt
+    - type: human_rejected
+      action: halt
+
 metrics:
   - name: primary_quality
     primary: true
+    definition: "Weighted rubric score"
+    source: evaluators.quality_rubric
+    unit: ratio
+    target: 0.80
+  - name: gate_compliance
+    definition: "High-risk steps routed through approval gate"
     source: evaluators.approval_gate
     unit: ratio
-    target: 0.8
+    target: 1.0
+  - name: cost_usd
+    definition: "Total API spend"
+    source: telemetry.cost
+    unit: usd
+    target: 0.50
+
+safety_constraints:
+  - id: approval-gate
+    type: human_gate
+    scope: post_worker
+    applies_to: [executor]
+    action: halt
+    severity: S1
+    on_error: halt
+
 cost_limits:
-  per_iteration_usd: 0.1
-  cumulative_usd: 0.5
+  per_iteration_usd: 0.20
+  cumulative_usd: 0.50
   on_exceed:
     action: halt

@@ -1,0 +1,95 @@
+loop_name: composed-swarm-orchestrator
+version: 1.0.0
+
+objective: >
+  Synthesize parallel branch outputs (falsifier, evidence, operator) into a forecast brief
+  with dissent preserved. Achieve composite_quality >= 0.80.
+
+inputs:
+  schema:
+    task:
+      type: string
+      description: "Top-level decision or scenario to rehearse across parallel branches"
+      required: true
+  examples:
+    - task: "Rehearse go/no-go decision for Q3 platform migration."
+
+memory:
+  type: ephemeral
+
+workers:
+  - id: orchestrator
+    role: "Merge parallel branch briefs into a decision memo; preserve explicit dissent"
+    model:
+      provider: openai
+      name: gpt-4.1-mini
+      temperature: 0.2
+    inputs:
+      - from: inputs.task
+    outputs:
+      name: ForecastBrief
+      format: text
+    timeout_seconds: 180
+    retries: 1
+    cost_budget_usd: 0.50
+
+evaluators:
+  - id: composite_gate
+    type: llm_rubric
+    runs_after: [orchestrator]
+    rubric:
+      dimensions:
+        - name: pipeline_quality
+          weight: 1.0
+          scale: [0, 1]
+          criteria: "Synthesize branch outputs; preserve dissent when branches disagree"
+      pass_threshold: 0.80
+    model:
+      provider: openai
+      name: gpt-4.1-mini
+      temperature: 0
+
+feedback_channels:
+  - id: composite_to_orchestrator
+    source: evaluators.composite_gate
+    destination: workers.orchestrator
+    format: structured
+    when: "score < pass_threshold"
+
+optimization_strategy:
+  type: prompt_refinement
+  max_steps: 10
+
+termination_conditions:
+  success:
+    - metric: composite_quality
+      operator: gte
+      value: 0.80
+      consecutive: 1
+  failure:
+    - type: max_iterations
+      value: 10
+      action: halt
+
+metrics:
+  - name: composite_quality
+    primary: true
+    definition: "Orchestrator merge rubric score after parallel branch synthesis"
+    source: evaluators.composite_gate
+    unit: ratio
+    target: 0.80
+
+safety_constraints: []
+
+cost_limits:
+  per_iteration_usd: 0.20
+  cumulative_usd: 2.00
+  token_soft_cap: 12000
+  on_exceed:
+    action: halt
+
+metadata:
+  taxonomy_level: 4
+  task_family: LB-COMP-1
+  parent_composition: scenario-swarm-rehearsal
+  lss_extension: "1.1-composition"

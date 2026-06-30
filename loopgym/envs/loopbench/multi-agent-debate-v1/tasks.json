@@ -1,0 +1,29 @@
+{
+  "task_family": "LB-MA-1",
+  "tasks": [
+    {
+      "id": "ma-001",
+      "difficulty": "high",
+      "input": {
+        "proposal": "Add refresh token rotation with 15-minute access token TTL",
+        "risk_tier": "high"
+      }
+    },
+    {
+      "id": "ma-002",
+      "difficulty": "medium",
+      "input": {
+        "proposal": "Migrate session store from in-memory to Redis with graceful fallback",
+        "risk_tier": "medium"
+      }
+    },
+    {
+      "id": "ma-003",
+      "difficulty": "low",
+      "input": {
+        "proposal": "Add structured logging to payment webhook handler",
+        "risk_tier": "low"
+      }
+    }
+  ]
+}

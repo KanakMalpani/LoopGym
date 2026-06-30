@@ -1,0 +1,128 @@
+loop_name: code-repair-loop
+version: 1.0.0
+
+objective: >
+  Given a Python repository with failing tests and a bug description, modify
+  source code until all designated tests pass, achieving primary_quality >= 0.80
+  within cost_limits.
+
+inputs:
+  schema:
+    bug_description:
+      type: string
+      description: "Natural language description of the bug"
+      required: true
+      max_length: 2000
+    repo_snapshot:
+      type: string
+      description: "Path or identifier for the repository fixture"
+      required: true
+  examples:
+    - bug_description: "parse_int returns None instead of raising on invalid input"
+      repo_snapshot: "fixtures/calc-v1"
+
+memory:
+  type: ephemeral
+
+workers:
+  - id: implementer
+    role: "Analyze failing tests and produce a minimal code patch"
+    model:
+      provider: openai
+      name: gpt-4.1-mini
+      temperature: 0.2
+    inputs:
+      - from: inputs.bug_description
+    outputs:
+      name: Patch
+      format: code
+    timeout_seconds: 120
+    retries: 1
+    cost_budget_usd: 0.25
+
+evaluators:
+  - id: test_runner
+    type: deterministic
+    runs_after: [implementer]
+    implementation: evaluators.test_pass_rate
+  - id: quality_rubric
+    type: llm_rubric
+    runs_after: [implementer]
+    rubric:
+      dimensions:
+        - name: correctness
+          weight: 0.7
+          scale: [0, 1]
+          criteria: "Patch fixes the bug without breaking other tests"
+        - name: minimality
+          weight: 0.3
+          scale: [0, 1]
+          criteria: "Diff is minimal and focused"
+      pass_threshold: 0.80
+    model:
+      provider: openai
+      name: gpt-4.1-mini
+      temperature: 0
+
+feedback_channels:
+  - id: tests_to_implementer
+    source: evaluators.test_runner
+    destination: workers.implementer
+    format: structured
+    fields: [failure_codes, remediation_hints]
+  - id: rubric_to_optimizer
+    source: evaluators.quality_rubric
+    destination: optimization_strategy.prompt_refinement
+    format: structured
+    fields: [failure_codes, remediation_hints]
+
+optimization_strategy:
+  type: prompt_refinement
+  max_steps: 6
+  config:
+    refinement_target: workers.implementer
+
+termination_conditions:
+  success:
+    - metric: primary_quality
+      operator: gte
+      value: 0.80
+  failure:
+    - type: max_iterations
+      value: 6
+      action: halt
+    - type: safety_violation
+      action: halt
+
+metrics:
+  - name: primary_quality
+    primary: true
+    definition: "Weighted rubric score from quality_rubric"
+    source: evaluators.quality_rubric
+    unit: ratio
+    target: 0.80
+  - name: test_pass_rate
+    definition: "Fraction of required tests passing"
+    source: evaluators.test_runner
+    unit: ratio
+    target: 1.0
+  - name: cost_usd
+    definition: "Total API spend per loop run"
+    source: telemetry.cost
+    unit: usd
+    target: 0.50
+
+safety_constraints:
+  - id: secret-scan
+    type: secret_scan
+    scope: post_worker
+    applies_to: [implementer]
+    action: halt
+    severity: S0
+    on_error: halt
+
+cost_limits:
+  per_iteration_usd: 0.20
+  cumulative_usd: 0.60
+  on_exceed:
+    action: halt

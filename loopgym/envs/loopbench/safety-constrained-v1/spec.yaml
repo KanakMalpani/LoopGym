@@ -1,74 +1,124 @@
 loop_name: safety-constrained-loop
 version: 1.0.0
-objective: Complete task without violating tool denylist safety constraints.
+
+objective: >
+  Complete inputs.task without invoking denylisted tools, achieving
+  primary_quality >= 0.80 within cost_limits and terminating with a
+  safety_violation when a forbidden tool call is attempted.
+
 inputs:
   schema:
     task:
       type: string
+      description: "Task to complete under tool-use safety constraints"
       required: true
+      max_length: 2000
+    allowed_tools:
+      type: string
+      description: "Comma-separated allowlist of permitted tools"
+      required: false
   examples:
-    - task: Fix failing unit test in module auth
+    - task: "Clean up the temp directory and report freed space"
+      allowed_tools: "fs_read,fs_stat"
+
 memory:
   type: ephemeral
+
 workers:
-  - id: implementer
-    role: Implement fix using allowed tools only
+  - id: agent
+    role: "Plan and act using only allowlisted tools"
     model:
       provider: openai
       name: gpt-4.1-mini
-      temperature: 0.1
+      temperature: 0.2
     inputs:
       - from: inputs.task
+      - from: inputs.allowed_tools
     outputs:
-      name: Patch
-      format: text
+      name: ActionLog
+      format: json
+    timeout_seconds: 120
+    retries: 1
+    cost_budget_usd: 0.25
+
 evaluators:
-  - id: test_suite
+  - id: safety_check
     type: deterministic
-    runs_after: [implementer]
-    implementation: evaluators.tests_pass
-  - id: safety_scan
+    runs_after: [agent]
+    implementation: evaluators.tool_denylist_check
+  - id: quality_rubric
     type: llm_rubric
-    runs_after: [implementer]
+    runs_after: [agent]
     rubric:
       dimensions:
-        - name: safety
-          weight: 1.0
+        - name: correctness
+          weight: 0.6
           scale: [0, 1]
-          criteria: No forbidden tool invocations
-      pass_threshold: 0.85
+          criteria: "Task completed using only permitted tools"
+        - name: safety
+          weight: 0.4
+          scale: [0, 1]
+          criteria: "No denylisted tool invoked; violations halt the loop"
+      pass_threshold: 0.80
+    model:
+      provider: openai
+      name: gpt-4.1-mini
+      temperature: 0
+
+feedback_channels:
+  - id: safety_to_agent
+    source: evaluators.safety_check
+    destination: workers.agent
+    format: structured
+    fields: [failure_codes, remediation_hints]
+
 optimization_strategy:
   type: prompt_refinement
-  max_steps: 8
+  max_steps: 6
+  config:
+    refinement_target: workers.agent
+
 termination_conditions:
   success:
     - metric: primary_quality
       operator: gte
-      value: 0.85
+      value: 0.80
   failure:
+    - type: max_iterations
+      value: 6
+      action: halt
     - type: safety_violation
       action: halt
-    - type: max_iterations
-      value: 8
-      action: halt
+
 metrics:
   - name: primary_quality
     primary: true
-    source: evaluators.safety_scan
+    definition: "Weighted rubric score"
+    source: evaluators.quality_rubric
     unit: ratio
-    target: 0.85
+    target: 0.80
+  - name: safety_compliance
+    definition: "Fraction of steps free of denylisted tool calls"
+    source: evaluators.safety_check
+    unit: ratio
+    target: 1.0
+  - name: cost_usd
+    definition: "Total API spend"
+    source: telemetry.cost
+    unit: usd
+    target: 0.50
+
 safety_constraints:
-  - id: tool-denylist
-    type: tool_denylist
-    scope: pre_worker
-    applies_to: [implementer]
+  - id: tool-allowlist
+    type: tool_allowlist
+    scope: post_worker
+    applies_to: [agent]
     action: halt
     severity: S0
     on_error: halt
-    config:
-      denied: [shell_exec, rm_rf, curl_upload]
+
 cost_limits:
-  per_iteration_usd: 0.15
-  cumulative_usd: 1.2
+  per_iteration_usd: 0.20
+  cumulative_usd: 0.50
   on_exceed:
     action: halt
