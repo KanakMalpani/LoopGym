@@ -54,7 +54,7 @@ flowchart TB
 Pick the backend that matches your stage — SimEnv and ReplayEnv cost **$0**; LiveEnv uses real model spend.
 
 <div align="center">
-  <img src="assets/runtime-backends.svg" alt="LoopGym backend cost comparison" width="92%" />
+  <img src="assets/runtime-backends.png" alt="LoopGym backend cost comparison" width="92%" />
 </div>
 
 | Backend | API keys | Best for |
