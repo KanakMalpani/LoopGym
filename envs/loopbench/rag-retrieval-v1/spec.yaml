@@ -1,0 +1,132 @@
+loop_name: rag-retrieval-loop
+version: 1.0.0
+
+objective: >
+  Answer inputs.query grounded in retrieved sources, achieving primary_quality
+  >= 0.85 within cost_limits even when the corpus is incomplete or contains
+  stale documents.
+
+inputs:
+  schema:
+    query:
+      type: string
+      description: "Question to answer from the retrieved corpus"
+      required: true
+      max_length: 2000
+    corpus:
+      type: string
+      description: "Identifier for the retrieval corpus fixture"
+      required: false
+  examples:
+    - query: "What changed in the v0.2 retrieval index?"
+      corpus: "fixtures/docs-v0.2"
+
+memory:
+  type: session
+  backend: composite
+  retention:
+    unit: iteration
+    value: 8
+
+workers:
+  - id: retriever
+    role: "Retrieve candidate passages and flag missing or stale sources"
+    model:
+      provider: openai
+      name: gpt-4.1-mini
+      temperature: 0.2
+    inputs:
+      - from: inputs.query
+    outputs:
+      name: RetrievedContext
+      format: json
+    timeout_seconds: 120
+    cost_budget_usd: 0.25
+
+  - id: answerer
+    role: "Synthesize a grounded answer with citations from retrieved context"
+    model:
+      provider: openai
+      name: gpt-4.1-mini
+      temperature: 0.2
+    depends_on: [retriever]
+    inputs:
+      - from: inputs.query
+    outputs:
+      name: Answer
+      format: markdown
+    timeout_seconds: 120
+    cost_budget_usd: 0.25
+
+evaluators:
+  - id: grounding_check
+    type: deterministic
+    runs_after: [answerer]
+    implementation: evaluators.citation_count_min
+  - id: quality_rubric
+    type: llm_rubric
+    runs_after: [answerer]
+    rubric:
+      dimensions:
+        - name: faithfulness
+          weight: 0.6
+          scale: [0, 1]
+          criteria: "Answer is grounded in retrieved sources, no hallucination"
+        - name: completeness
+          weight: 0.4
+          scale: [0, 1]
+          criteria: "Answer covers the query despite corpus perturbations"
+      pass_threshold: 0.85
+    model:
+      provider: openai
+      name: gpt-4.1-mini
+      temperature: 0
+
+feedback_channels:
+  - id: rubric_to_answerer
+    source: evaluators.quality_rubric
+    destination: workers.answerer
+    format: structured
+    fields: [failure_codes, dimension_scores, remediation_hints]
+
+optimization_strategy:
+  type: prompt_refinement
+  max_steps: 5
+  config:
+    refinement_target: workers.answerer
+
+termination_conditions:
+  success:
+    - metric: primary_quality
+      operator: gte
+      value: 0.85
+  failure:
+    - type: max_iterations
+      value: 5
+      action: halt
+
+metrics:
+  - name: primary_quality
+    primary: true
+    definition: "Weighted rubric score"
+    source: evaluators.quality_rubric
+    unit: ratio
+    target: 0.85
+  - name: grounding_validity
+    definition: "Citations meet minimum grounding threshold"
+    source: evaluators.grounding_check
+    unit: ratio
+    target: 1.0
+  - name: cost_usd
+    definition: "Total API spend"
+    source: telemetry.cost
+    unit: usd
+    target: 0.50
+
+safety_constraints: []
+
+cost_limits:
+  per_iteration_usd: 0.20
+  cumulative_usd: 0.50
+  on_exceed:
+    action: halt

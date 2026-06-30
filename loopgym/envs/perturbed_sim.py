@@ -84,4 +84,13 @@ class PerturbedSimEnv(SimEnv):
                 done = True
             elif self._perturbation in ("missing_source", "stale_source") and self._state.iteration >= 2:
                 self._state.quality_score = max(0.5, self._state.quality_score - 0.08)
+            # Forced terminations and score penalties must be reflected in the
+            # reported success/quality so a rejection or violation never reads as success.
+            threshold = self._runtime.quality_threshold if self._runtime else 0.8
+            info["success"] = self._state.quality_score >= threshold
+            info["termination_reason"] = self._state.termination_reason
+            info["quality_score"] = self._state.quality_score
+            if self._obs is not None:
+                self._obs.quality_score = self._state.quality_score
+                self._obs.done = done
         return obs, reward, done, info

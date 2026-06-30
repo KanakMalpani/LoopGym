@@ -1,0 +1,32 @@
+{
+  "task_family": "LB-RAG-1",
+  "tasks": [
+    {
+      "id": "LB-RAG-1",
+      "difficulty": "standard",
+      "perturbation": "missing_source",
+      "input": {
+        "query": "What changed in the v0.2 retrieval index?",
+        "corpus": "fixtures/docs-v0.2"
+      }
+    },
+    {
+      "id": "LB-RAG-2",
+      "difficulty": "hard",
+      "perturbation": "stale_source",
+      "input": {
+        "query": "Summarize the current safety policy for tool calls",
+        "corpus": "fixtures/policy-v1"
+      }
+    },
+    {
+      "id": "rag-003",
+      "difficulty": "standard",
+      "perturbation": "none",
+      "input": {
+        "query": "List the registered LoopGym SimEnvs",
+        "corpus": "fixtures/loopgym-readme"
+      }
+    }
+  ]
+}
