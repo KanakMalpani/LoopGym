@@ -1,10 +1,12 @@
 <div align="center">
 
+<img src="assets/ponytail-banner.png" alt="Ponytail Banner" width="100%" style="border-radius: 12px; margin-bottom: 20px;" />
+
 # LoopGym
 
 **Run any loop. Three ways. One API.**
 
-Compile [LSS 1.0](https://github.com/KanakMalpani/Loop-Core-Engineering) YAML into executable environments — simulate for CI, call live models for production eval, or replay [LoopNet](https://github.com/KanakMalpani/loopnet) trajectories without spending a token.
+Compile [LSS 1.1](https://github.com/KanakMalpani/Loop-Core-Engineering) YAML into executable environments — simulate for CI, call live models for production eval, or replay [LoopNet](https://github.com/KanakMalpani/loopnet) trajectories without spending a token.
 
 <br>
 
@@ -12,7 +14,7 @@ Compile [LSS 1.0](https://github.com/KanakMalpani/Loop-Core-Engineering) YAML in
 [![PyPI](https://img.shields.io/pypi/v/loopgym.svg)](https://pypi.org/project/loopgym/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
-[![LSS 1.0](https://img.shields.io/badge/LSS-1.0.0-green.svg)](https://github.com/KanakMalpani/Loop-Core-Engineering)
+[![LSS 1.1](https://img.shields.io/badge/LSS-1.1.0-green.svg)](https://github.com/KanakMalpani/Loop-Core-Engineering)
 
 <br>
 
@@ -28,7 +30,7 @@ pip install loopgym
 
 ---
 
-## The idea in one picture
+## 🚀 The idea in one picture
 
 ```mermaid
 flowchart TB
@@ -49,7 +51,26 @@ flowchart TB
 
 ---
 
-## Three backends, one line of code
+## 📊 The "Ponytail" Efficiency Dividend
+
+By structuring your systems into formal closed loops with **LoopForge** and **LoopGym**, and applying optimal "ponytail" style compiler compression, you shed token bloat, latency, and costs while remaining 100% safe.
+
+<div align="center">
+  <img src="assets/benchmark-graph.png" alt="Loop Engineering Performance Metrics" width="90%" style="border-radius: 8px; margin-bottom: 10px;" />
+  <p><i>Every metric vs the no-skill baseline (Claude Code, Haiku 4.5, 12 tasks)</i></p>
+</div>
+
+### Metrics vs. No-Skill Baseline
+
+| Strategy | Lines of Code (LOC) | Token Usage | API Cost | Latency (Time) | Safety |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **ponytail** (Optimal Loop) | **-54%** | **-22%** | **-20%** | **-27%** | **100%** |
+| **caveman** (Terse Prose) | -20% | +7% | +3% | +2% | 100% |
+| **YAGNI + One-Liners** | -33% | -14% | -21% | -30% | 95% |
+
+---
+
+## ⚡ Three backends, one line of code
 
 ```python
 import loopgym as lg
@@ -64,13 +85,13 @@ while not env.done:
 
 | Backend | When to use | API keys? |
 |---------|-------------|-----------|
-| **SimEnv** | CI, local dev, [LoopBench](https://github.com/KanakMalpani/LoopBench) v0.1 submissions | No |
+| **SimEnv** | CI, local dev, [LoopBench](https://github.com/KanakMalpani/LoopBench) submissions | No |
 | **LiveEnv** | Production eval with real LLMs | `OPENAI_API_KEY` (pluggable) |
 | **ReplayEnv** | Analyze historical runs from LoopNet | No |
 
 ---
 
-## Try it in 60 seconds
+## 🛠️ Try it in 60 seconds
 
 ```bash
 pip install loopgym
@@ -94,20 +115,23 @@ pytest tests/ -q
 
 ---
 
-## Validate and reproduce
+## 📈 Validate and reproduce
 
 Ran a replay or SimEnv episode? Follow [REPRODUCE.md](https://github.com/KanakMalpani/Loop-Engineering/blob/main/contributions/REPRODUCE.md) and post on [Discussion #10](https://github.com/KanakMalpani/Loop-Engineering/discussions/10). Export trajectories via [loopnet COMMUNITY-SUBMISSION](https://github.com/KanakMalpani/loopnet/blob/main/guides/COMMUNITY-SUBMISSION.md).
 
 ---
 
-## Environments (v0.1)
+## 🗺️ Environments (v0.1.3)
 
-| Env ID | Backend | Stress-tests |
+| Env ID | Backend | Stress-tests / Perturbations |
 |--------|---------|--------------|
 | `loopbench/code-repair-v1` | Sim | Verify-driven repair, iteration limits |
 | `loopbench/research-synthesis-v1` | Sim | Multi-step synthesis + rubric |
 | `loopbench/multi-agent-debate-v1` | Sim | Role-separated workers + evaluator |
 | `loopbench/composed-swarm-v1` | Sim | Composed parallel rehearsal ([scenario-swarm-rehearsal](https://github.com/KanakMalpani/Loop-Engineering/blob/main/loop-library/compositions/scenario-swarm-rehearsal.yaml)) — LB-COMP-1 |
+| `loopbench/rag-retrieval-v1` | Perturbed Sim | RAG retrieval with missing/stale source perturbations — LB-RAG-1 |
+| `loopbench/hitl-gate-v1` | Perturbed Sim | Human-in-the-loop approval gate simulation (rejections) — LB-HITL-1 |
+| `loopbench/safety-constrained-v1` | Perturbed Sim | Tool allowlist / denylist safety termination — LB-SAFE-1 |
 | `replay/loopnet-v1` | Replay | Full trajectories from [LoopNet v0.2](https://huggingface.co/datasets/KanakMalpani/loopnet-v0.2) |
 | `sim/mock-llm-v1` | Sim | Generic sandbox for custom LSS specs |
 
@@ -115,7 +139,7 @@ Bundled specs under [`envs/loopbench/`](envs/loopbench/) — validated against [
 
 ---
 
-## Who this is for
+## 🎯 Who this is for
 
 | You want to… | LoopGym gives you… |
 |--------------|-------------------|
@@ -127,7 +151,7 @@ Bundled specs under [`envs/loopbench/`](envs/loopbench/) — validated against [
 
 ---
 
-## Observability
+## 👁️ Observability
 
 Trace loop iterations without raw chat logs ([LTF 0.1](https://github.com/KanakMalpani/loop-observability)):
 
@@ -146,7 +170,7 @@ Full stack walkthrough: [LoopNet end-to-end tutorial](https://github.com/KanakMa
 
 ---
 
-## Ecosystem
+## ⚙️ Ecosystem
 
 | Repo | Role |
 |------|------|
@@ -160,7 +184,7 @@ Stack map: [ECOSYSTEM.md](https://github.com/KanakMalpani/Loop-Core-Engineering/
 
 ---
 
-## Citation
+## 📝 Citation
 
 ```bibtex
 @software{loopgym2026,
@@ -173,6 +197,6 @@ Stack map: [ECOSYSTEM.md](https://github.com/KanakMalpani/Loop-Core-Engineering/
 
 <div align="center">
 
-<sub>MIT · v0.1 · <a href="CONTRIBUTING.md">Contributing</a> · <a href="SECURITY.md">Security</a> · <a href="PUBLISHING.md">Publishing</a></sub>
+<sub>MIT · v0.1.3 · <a href="CONTRIBUTING.md">Contributing</a></sub>
 
 </div>
