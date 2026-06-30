@@ -49,13 +49,24 @@ flowchart TB
 
 ---
 
-## Run cost vs fidelity
+## Run cost vs fidelity — and everything else you get
 
-Pick the backend that matches your stage — SimEnv and ReplayEnv cost **$0**; LiveEnv uses real model spend.
+Pick the backend that matches your stage. SimEnv and ReplayEnv cost **$0**; LiveEnv uses real model spend when you need production truth.
 
 <div align="center">
   <img src="assets/runtime-backends.png" alt="LoopGym backend cost comparison" width="92%" />
 </div>
+
+| Benefit | SimEnv / Replay | LiveEnv |
+| :--- | :--- | :--- |
+| **API spend** | **$0** — run all night | Real model cost |
+| **Determinism** | Fixed seeds · CI-safe | Stochastic production |
+| **LoopBench ready** | Submit scores without keys | Production eval |
+| **LoopNet replay** | Replay 545 trajectories offline | N/A |
+| **Safety / HITL drills** | PerturbedSim perturbations | Full stack |
+| **One API** | `loopgym.make(env_id)` — same code path | Same |
+
+**The unlock:** develop, test, benchmark, and regress **before** you burn tokens in prod.
 
 | Backend | API keys | Best for |
 | :--- | :---: | :--- |
