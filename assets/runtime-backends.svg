@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 380" role="img" aria-label="LoopGym runtime backends comparison">
+  <rect width="880" height="380" rx="14" fill="#111113"/>
+  <text x="32" y="38" fill="#f4f4f5" font-family="ui-monospace, monospace" font-size="15" font-weight="700">One API · three backends · cost vs fidelity</text>
+  <text x="32" y="58" fill="#a1a1aa" font-family="ui-monospace, monospace" font-size="11">loopgym.make(env_id) · 7 SimEnvs + replay · lower bar = cheaper to run</text>
+
+  <!-- relative cost bars (sim=8%, replay=5%, live=100%) -->
+  <text x="120" y="100" fill="#71717a" font-family="ui-monospace, monospace" font-size="10">SimEnv</text>
+  <rect x="120" y="110" width="58" height="32" rx="6" fill="#22c55e"/>
+  <text x="848" y="132" fill="#86efac" font-family="ui-monospace, monospace" font-size="11" text-anchor="end">$0 · no API keys · CI-safe</text>
+
+  <text x="120" y="168" fill="#71717a" font-family="ui-monospace, monospace" font-size="10">ReplayEnv</text>
+  <rect x="120" y="178" width="36" height="32" rx="6" fill="#38bdf8"/>
+  <text x="848" y="200" fill="#7dd3fc" font-family="ui-monospace, monospace" font-size="11" text-anchor="end">$0 · LoopNet trajectories</text>
+
+  <text x="120" y="236" fill="#71717a" font-family="ui-monospace, monospace" font-size="10">LiveEnv</text>
+  <rect x="120" y="246" width="720" height="32" rx="6" fill="#f97316"/>
+  <text x="848" y="268" fill="#fdba74" font-family="ui-monospace, monospace" font-size="11" text-anchor="end">real LLM spend · production eval</text>
+
+  <text x="120" y="304" fill="#71717a" font-family="ui-monospace, monospace" font-size="10">PerturbedSim</text>
+  <rect x="120" y="314" width="58" height="32" rx="6" fill="#a855f7"/>
+  <text x="848" y="336" fill="#d8b4fe" font-family="ui-monospace, monospace" font-size="11" text-anchor="end">RAG · HITL · safety gates · LB-RAG/HITL/SAFE</text>
+
+  <rect x="32" y="356" width="816" height="1" fill="#27272a"/>
+</svg>

@@ -1,7 +1,5 @@
 <div align="center">
 
-<img src="assets/ponytail-banner.png" alt="Ponytail Banner" width="100%" style="border-radius: 12px; margin-bottom: 20px;" />
-
 # LoopGym
 
 **Run any loop. Three ways. One API.**
@@ -51,22 +49,20 @@ flowchart TB
 
 ---
 
-## 📊 The "Ponytail" Efficiency Dividend
+## Run cost vs fidelity
 
-By structuring your systems into formal closed loops with **LoopForge** and **LoopGym**, and applying optimal "ponytail" style compiler compression, you shed token bloat, latency, and costs while remaining 100% safe.
+Pick the backend that matches your stage — SimEnv and ReplayEnv cost **$0**; LiveEnv uses real model spend.
 
 <div align="center">
-  <img src="assets/benchmark-graph.png" alt="Loop Engineering Performance Metrics" width="90%" style="border-radius: 8px; margin-bottom: 10px;" />
-  <p><i>Every metric vs the no-skill baseline (Claude Code, Haiku 4.5, 12 tasks)</i></p>
+  <img src="assets/runtime-backends.svg" alt="LoopGym backend cost comparison" width="92%" />
 </div>
 
-### Metrics vs. No-Skill Baseline
-
-| Strategy | Lines of Code (LOC) | Token Usage | API Cost | Latency (Time) | Safety |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **ponytail** (Optimal Loop) | **-54%** | **-22%** | **-20%** | **-27%** | **100%** |
-| **caveman** (Terse Prose) | -20% | +7% | +3% | +2% | 100% |
-| **YAGNI + One-Liners** | -33% | -14% | -21% | -30% | 95% |
+| Backend | API keys | Best for |
+| :--- | :---: | :--- |
+| **SimEnv** | No | CI, LoopBench submissions, local dev |
+| **ReplayEnv** | No | LoopNet trajectory analysis |
+| **PerturbedSim** | No | RAG / HITL / safety perturbations |
+| **LiveEnv** | Yes | Production eval with real LLMs |
 
 ---
 
