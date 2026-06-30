@@ -1,0 +1,14 @@
+{
+  "tasks": [
+    {
+      "id": "LB-RAG-1",
+      "input": { "query": "Compare two treatments with missing primary study" },
+      "perturbation": "missing_source"
+    },
+    {
+      "id": "LB-RAG-2",
+      "input": { "query": "Policy brief with stale regulatory doc" },
+      "perturbation": "stale_source"
+    }
+  ]
+}

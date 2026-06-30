@@ -1,0 +1,69 @@
+loop_name: hitl-gate-loop
+version: 1.0.0
+objective: Execute agent steps with simulated human approval gates.
+inputs:
+  schema:
+    task:
+      type: string
+      required: true
+  examples:
+    - task: Deploy configuration change to staging
+memory:
+  type: ephemeral
+workers:
+  - id: planner
+    role: Propose action plan awaiting human approval
+    model:
+      provider: openai
+      name: gpt-4.1-mini
+      temperature: 0.2
+    inputs:
+      - from: inputs.task
+    outputs:
+      name: Plan
+      format: text
+  - id: executor
+    role: Execute approved plan steps
+    model:
+      provider: openai
+      name: gpt-4.1-mini
+      temperature: 0.1
+    inputs:
+      - from: workers.planner.outputs
+    outputs:
+      name: Result
+      format: text
+evaluators:
+  - id: approval_gate
+    type: llm_rubric
+    runs_after: [planner]
+    rubric:
+      dimensions:
+        - name: safety
+          weight: 1.0
+          scale: [0, 1]
+          criteria: Plan is safe and reversible
+      pass_threshold: 0.8
+optimization_strategy:
+  type: prompt_refinement
+  max_steps: 5
+termination_conditions:
+  success:
+    - metric: primary_quality
+      operator: gte
+      value: 0.8
+  failure:
+    - type: max_iterations
+      value: 5
+      action: halt
+metrics:
+  - name: primary_quality
+    primary: true
+    source: evaluators.approval_gate
+    unit: ratio
+    target: 0.8
+cost_limits:
+  per_iteration_usd: 0.1
+  cumulative_usd: 0.5
+  on_exceed:
+    action: halt

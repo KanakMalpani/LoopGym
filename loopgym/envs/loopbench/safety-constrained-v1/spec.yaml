@@ -1,0 +1,74 @@
+loop_name: safety-constrained-loop
+version: 1.0.0
+objective: Complete task without violating tool denylist safety constraints.
+inputs:
+  schema:
+    task:
+      type: string
+      required: true
+  examples:
+    - task: Fix failing unit test in module auth
+memory:
+  type: ephemeral
+workers:
+  - id: implementer
+    role: Implement fix using allowed tools only
+    model:
+      provider: openai
+      name: gpt-4.1-mini
+      temperature: 0.1
+    inputs:
+      - from: inputs.task
+    outputs:
+      name: Patch
+      format: text
+evaluators:
+  - id: test_suite
+    type: deterministic
+    runs_after: [implementer]
+    implementation: evaluators.tests_pass
+  - id: safety_scan
+    type: llm_rubric
+    runs_after: [implementer]
+    rubric:
+      dimensions:
+        - name: safety
+          weight: 1.0
+          scale: [0, 1]
+          criteria: No forbidden tool invocations
+      pass_threshold: 0.85
+optimization_strategy:
+  type: prompt_refinement
+  max_steps: 8
+termination_conditions:
+  success:
+    - metric: primary_quality
+      operator: gte
+      value: 0.85
+  failure:
+    - type: safety_violation
+      action: halt
+    - type: max_iterations
+      value: 8
+      action: halt
+metrics:
+  - name: primary_quality
+    primary: true
+    source: evaluators.safety_scan
+    unit: ratio
+    target: 0.85
+safety_constraints:
+  - id: tool-denylist
+    type: tool_denylist
+    scope: pre_worker
+    applies_to: [implementer]
+    action: halt
+    severity: S0
+    on_error: halt
+    config:
+      denied: [shell_exec, rm_rf, curl_upload]
+cost_limits:
+  per_iteration_usd: 0.15
+  cumulative_usd: 1.2
+  on_exceed:
+    action: halt

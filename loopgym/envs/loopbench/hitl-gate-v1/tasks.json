@@ -1,0 +1,14 @@
+{
+  "tasks": [
+    {
+      "id": "LB-HITL-1",
+      "input": { "task": "Merge PR that touches auth middleware" },
+      "perturbation": "hitl_reject"
+    },
+    {
+      "id": "LB-HITL-2",
+      "input": { "task": "Run database migration with rollback plan" },
+      "perturbation": "none"
+    }
+  ]
+}

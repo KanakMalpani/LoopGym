@@ -13,7 +13,7 @@
 ## Completion checklist
 
 - [x] `loopgym/` Python package
-- [x] `envs/loopbench/` stub envs (3 tasks)
+- [x] `envs/loopbench/` — SimEnvs backing LoopBench micro-tasks (4 env IDs, 19 tasks)
 - [x] `examples/quickstart.py`
 - [x] `docs/api.md`
 - [x] ReplayEnv ↔ LoopNet seed integration
@@ -25,7 +25,8 @@
 
 ## Links
 
-- Parent workspace: [../README.md](../README.md)
-- Core specs: [../01-loop-engineering-core/](../01-loop-engineering-core/)
-- Agent brief: [../AGENT-BRIEF.md](../AGENT-BRIEF.md)
-- Discipline repo (source runtime): https://github.com/KanakMalpani/Loop-Engineering
+- Workspace state: [../WORKSPACE_CURRENT_STATE.md](../WORKSPACE_CURRENT_STATE.md)
+- Parent map: [../README.md](../README.md)
+- Core specs: [../02-loop-core-engineering/](../02-loop-core-engineering/)
+- Benchmark tasks: [../07-loopbench/tasks/](../07-loopbench/tasks/)
+- Agent brief: [../AGENT_BRIEFS/loopgym.md](../AGENT_BRIEFS/loopgym.md)

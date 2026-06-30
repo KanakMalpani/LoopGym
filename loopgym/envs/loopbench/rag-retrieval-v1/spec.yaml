@@ -1,0 +1,69 @@
+loop_name: rag-retrieval-loop
+version: 1.0.0
+objective: Retrieve and synthesize sources into a brief despite corpus perturbations.
+inputs:
+  schema:
+    query:
+      type: string
+      required: true
+  examples:
+    - query: Summarize evidence for hypothesis H1
+memory:
+  type: ephemeral
+workers:
+  - id: retriever
+    role: Retrieve relevant passages and flag missing or stale sources
+    model:
+      provider: openai
+      name: gpt-4.1-mini
+      temperature: 0.1
+    inputs:
+      - from: inputs.query
+    outputs:
+      name: RetrievalBundle
+      format: text
+  - id: synthesizer
+    role: Produce sourced brief from retrieved passages
+    model:
+      provider: openai
+      name: gpt-4.1-mini
+      temperature: 0.2
+    inputs:
+      - from: workers.retriever.outputs
+    outputs:
+      name: Brief
+      format: text
+evaluators:
+  - id: source_coverage
+    type: llm_rubric
+    runs_after: [synthesizer]
+    rubric:
+      dimensions:
+        - name: coverage
+          weight: 1.0
+          scale: [0, 1]
+          criteria: Brief cites available sources and notes gaps
+      pass_threshold: 0.78
+optimization_strategy:
+  type: prompt_refinement
+  max_steps: 6
+termination_conditions:
+  success:
+    - metric: primary_quality
+      operator: gte
+      value: 0.78
+  failure:
+    - type: max_iterations
+      value: 6
+      action: halt
+metrics:
+  - name: primary_quality
+    primary: true
+    source: evaluators.source_coverage
+    unit: ratio
+    target: 0.78
+cost_limits:
+  per_iteration_usd: 0.12
+  cumulative_usd: 0.72
+  on_exceed:
+    action: halt

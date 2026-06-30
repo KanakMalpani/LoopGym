@@ -8,6 +8,7 @@ from typing import Any
 from loopgym.envs.composed import ComposedSimEnv
 from loopgym.envs.live import LiveEnv
 from loopgym.envs.replay import ReplayEnv
+from loopgym.envs.perturbed_sim import PerturbedSimEnv
 from loopgym.envs.sim import SimEnv
 from loopgym.runtime.loop_runtime import load_lss_spec
 
@@ -55,6 +56,24 @@ _REGISTRY: dict[str, dict[str, Any]] = {
             ),
         ],
         "description": "Composed parallel swarm rehearsal (LB-COMP-1)",
+    },
+    "loopbench/rag-retrieval-v1": {
+        "backend": "perturbed",
+        "spec": _ENVS_ROOT / "rag-retrieval-v1" / "spec.yaml",
+        "tasks": _ENVS_ROOT / "rag-retrieval-v1" / "tasks.json",
+        "description": "RAG retrieval with missing/stale source perturbations (LB-RAG-1)",
+    },
+    "loopbench/hitl-gate-v1": {
+        "backend": "perturbed",
+        "spec": _ENVS_ROOT / "hitl-gate-v1" / "spec.yaml",
+        "tasks": _ENVS_ROOT / "hitl-gate-v1" / "tasks.json",
+        "description": "Human-in-the-loop approval gate simulation (LB-HITL-1)",
+    },
+    "loopbench/safety-constrained-v1": {
+        "backend": "perturbed",
+        "spec": _ENVS_ROOT / "safety-constrained-v1" / "spec.yaml",
+        "tasks": _ENVS_ROOT / "safety-constrained-v1" / "tasks.json",
+        "description": "Tool denylist safety termination (LB-SAFE-1)",
     },
     "replay/loopnet-v1": {
         "backend": "replay",
@@ -153,6 +172,15 @@ def make(
             spec_path_resolved or Path(entry["spec"]),
             Path(tasks_path) if tasks_path else None,
             branches,
+            seed=seed,
+        )
+
+    if chosen_backend == "perturbed":
+        return PerturbedSimEnv(
+            normalized,
+            spec,
+            spec_path=spec_path_resolved,
+            tasks_path=Path(tasks_path) if tasks_path and Path(tasks_path).exists() else None,
             seed=seed,
         )
 
