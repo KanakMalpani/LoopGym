@@ -73,7 +73,7 @@ class PerturbedSimEnv(SimEnv):
             if self._perturbation == "hitl_reject" and self._state.iteration == 1:
                 self._state.quality_score = min(self._state.quality_score, 0.55)
                 self._state.terminated = True
-                self._state.termination_reason = "hitl_rejected"
+                self._state.termination_reason = "human_rejected"
                 self._done = True
                 done = True
             elif self._perturbation == "tool_denylist" and self._state.iteration >= 1:

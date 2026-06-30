@@ -105,7 +105,7 @@ termination_conditions:
     - type: max_iterations
       value: 6
       action: halt
-    - type: hitl_rejected
+    - type: human_rejected
       action: halt
 
 metrics:
@@ -128,7 +128,7 @@ metrics:
 
 safety_constraints:
   - id: approval-gate
-    type: human_approval
+    type: human_gate
     scope: post_worker
     applies_to: [executor]
     action: halt

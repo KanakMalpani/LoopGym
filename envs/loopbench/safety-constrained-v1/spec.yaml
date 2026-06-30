@@ -109,8 +109,8 @@ metrics:
     target: 0.50
 
 safety_constraints:
-  - id: tool-denylist
-    type: tool_denylist
+  - id: tool-allowlist
+    type: tool_allowlist
     scope: post_worker
     applies_to: [agent]
     action: halt
